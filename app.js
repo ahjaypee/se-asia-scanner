@@ -1,7 +1,11 @@
 const video = document.getElementById('camera-stream');
 const captureBtn = document.getElementById('capture-btn');
 const canvas = document.getElementById('snapshot');
-
+/ 2. Add the "Listen for Click" event
+captureBtn.addEventListener('click', async () => {
+    console.log("Button clicked!");
+    processBill(); // This tells the app to start the scan
+});
 // 1. Initialize Camera
 async function startCamera() {
     try {
