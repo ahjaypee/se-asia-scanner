@@ -1,11 +1,23 @@
 const video = document.getElementById('camera-stream');
 const captureBtn = document.getElementById('capture-btn');
-const canvas = document.getElementById('snapshot');
-/ 2. Add the "Listen for Click" event
-captureBtn.addEventListener('click', async () => {
-    console.log("Button clicked!");
-    processBill(); // This tells the app to start the scan
-});
+
+// This part turns the camera ON as soon as the page loads
+async function startCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment" }, // Uses the back camera
+            audio: false 
+        });
+        video.srcObject = stream;
+    } catch (err) {
+        console.error("Camera error: ", err);
+        alert("Camera blocked. Please allow camera access in your browser settings.");
+    }
+}
+
+// Start the camera immediately
+startCamera();
+
 // 1. Initialize Camera
 async function startCamera() {
     try {
@@ -15,6 +27,12 @@ async function startCamera() {
         console.error("Camera access denied", err);
     }
 }
+
+captureBtn.addEventListener('click', () => {
+    alert("Scanning started!");
+   
+   // Your OCR and Currency logic goes here
+});
 
 // 2. Capture and OCR
 captureBtn.addEventListener('click', async () => {
