@@ -1,6 +1,3 @@
-// Start the camera immediately
-startCamera();
-
 const video = document.getElementById('camera-stream');
 const captureBtn = document.getElementById('capture-btn');
 
@@ -17,3 +14,9 @@ async function startCamera() {
         alert("Camera blocked. Please allow camera access in your browser settings.");
     }
 }
+capture-btn.addEventListener('click', () => {
+    alert("Button is working!");
+});
+
+// Move this to the very last line
+startCamera();
