@@ -8,21 +8,60 @@
     <script src="config.js"></script> 
     <script src="app.js" defer></script>
     <style>
-        body { font-family: sans-serif; margin: 20px; background: #f4f4f9; }
-        #camera-stream { width: 100%; border-radius: 8px; }
-        .result-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 15px; }
-    </style>
+    :root {
+        --bg: #0f172a; --card: #1e293b; --text: #f8fafc;
+        --accent: #38bdf8; --warning: #fb7185; --success: #4ade80;
+    }
+    body { 
+        font-family: -apple-system, sans-serif; background: var(--bg); 
+        color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center;
+    }
+    #camera-container { width: 100%; position: relative; background: #000; line-height: 0; }
+    #camera-stream { width: 100%; max-height: 40vh; object-fit: cover; }
+    
+    .controls { padding: 20px; width: 90%; max-width: 400px; }
+    #capture-btn { 
+        width: 100%; padding: 18px; border-radius: 50px; border: none;
+        background: var(--accent); color: var(--bg); font-weight: bold; font-size: 1.1rem;
+        box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
+    }
+    
+    .result-grid { 
+        display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;
+    }
+    .card { 
+        background: var(--card); padding: 15px; border-radius: 12px; 
+        border-left: 4px solid var(--accent);
+    }
+    .full-width { grid-column: 1 / -1; border-left-color: var(--success); }
+    .label { font-size: 0.75rem; text-transform: uppercase; opacity: 0.7; margin-bottom: 5px; }
+    .value { font-size: 1.4rem; font-weight: bold; }
+</style>
 </head>
 <body>
-    <h2>Travel Scanner 📸</h2>
-    <video id="camera-stream" autoplay playsinline></video>
-    <button id="capture-btn">Scan Bill</button>
-    <canvas id="snapshot" style="display:none;"></canvas>
+    <div id="camera-container">
+        <video id="camera-stream" autoplay playsinline></video>
+    </div>
 
-    <div id="output" class="result-card">
-        <p><strong>Total:</strong> <span id="local-total">--</span></p>
-        <p><strong>USD:</strong> <span id="usd-total">--</span></p>
-        <p><strong>Advice:</strong> <span id="tip-advice">Waiting for scan...</span></p>
+    <div class="controls">
+        <button id="capture-btn">📸 SCAN RECEIPT</button>
+
+        <div class="result-grid">
+            <div class="card">
+                <div class="label" id="local-label">Local Price</div>
+                <div class="value" id="local-total">--</div>
+            </div>
+            <div class="card">
+                <div class="label">USD Total</div>
+                <div class="value" id="usd-total">--</div>
+            </div>
+            <div class="card full-width">
+                <div class="label">Tipping & AI Verdict</div>
+                <div id="tip-advice" style="font-size: 0.95rem; line-height: 1.4;">
+                    Position bill in camera and tap scan.
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>
