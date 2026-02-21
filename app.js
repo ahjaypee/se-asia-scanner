@@ -1,5 +1,5 @@
 const video = document.getElementById('camera-stream');
-const captureBtn = document.getElementById('capture-btn');
+const captureBtn = document.getElementById('scanner-button');
 
 // This part turns the camera ON as soon as the page loads
 async function startCamera() {
@@ -14,8 +14,8 @@ async function startCamera() {
         alert("Camera blocked. Please allow camera access in your browser settings.");
     }
 }
-capture-btn.addEventListener('click', () => {
-    alert("Button is working!");
+captureBtn.addEventListener('click', () => {
+    alert("Shutter Fired!");
 });
 
 // Move this to the very last line
