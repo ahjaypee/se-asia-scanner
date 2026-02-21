@@ -36,7 +36,7 @@ function processBill(text) {
 
 async function convertCurrency(amount) {
     // Replace with your API key
-    const res = await fetch(`https://v6.exchangerate-api.com/v6/YOUR_KEY/latest/THB`);
+    const res = await fetch(`https://v6.exchangerate-api.com/v6/b5af70e98175c3764fda6084/latest/THB`);
     const data = await res.json();
     const rate = data.conversion_rates.USD;
     document.getElementById('usd-total').innerText = `$${(amount * rate).toFixed(2)}`;
