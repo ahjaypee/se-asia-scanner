@@ -1,5 +1,6 @@
-const video = document.getElementById('camera-stream');
 const captureBtn = document.getElementById('scanner-button');
+const video = document.getElementById('camera-stream');
+
 
 // This part turns the camera ON as soon as the page loads
 async function startCamera() {
