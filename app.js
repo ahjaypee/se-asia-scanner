@@ -22,6 +22,7 @@ captureBtn.addEventListener('click', async () => {
     // Run Tesseract OCR
     const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
     processBill(text);
+	checkTouristTrap(text, currentCountry);
 });
 
 function processBill(text) {
@@ -73,3 +74,21 @@ function updateLocation() {
 
 // Call this when the app starts
 updateLocation();
+
+async function checkTouristTrap(billText, country) {
+    const prompt = `I am a tourist in ${country}. Here is the text from my restaurant bill: "${billText}". 
+    Based on local 2026 prices, is this a fair price or a tourist trap? Give me a 1-sentence verdict and a 'Tourist Trap Score' out of 10.`;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyAZ3XwcoNY6CxqY0gARn-YmFZPIj9a5084`, {
+            method: 'POST',
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const data = await response.json();
+        const verdict = data.candidates[0].content.parts[0].text;
+        
+        document.getElementById('tip-advice').innerHTML += `<br><br><strong>AI Verdict:</strong> ${verdict}`;
+    } catch (err) {
+        console.error("AI check failed", err);
+    }
+}
