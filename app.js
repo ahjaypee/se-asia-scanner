@@ -1,0 +1,75 @@
+const video = document.getElementById('camera-stream');
+const captureBtn = document.getElementById('capture-btn');
+const canvas = document.getElementById('snapshot');
+
+// 1. Initialize Camera
+async function startCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+    } catch (err) {
+        console.error("Camera access denied", err);
+    }
+}
+
+// 2. Capture and OCR
+captureBtn.addEventListener('click', async () => {
+    const context = canvas.getContext('2d');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0);
+
+    // Run Tesseract OCR
+    const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+    processBill(text);
+});
+
+function processBill(text) {
+    // Basic regex to find numbers/totals (Simplified for demo)
+    const numbers = text.match(/\d+[,.]\d+/g);
+    if (numbers) {
+        const total = Math.max(...numbers.map(n => parseFloat(n.replace(',', ''))));
+        document.getElementById('local-total').innerText = total;
+        convertCurrency(total);
+    }
+}
+
+async function convertCurrency(amount) {
+    // Replace with your API key
+    const res = await fetch(`https://v6.exchangerate-api.com/v6/YOUR_KEY/latest/THB`);
+    const data = await res.json();
+    const rate = data.conversion_rates.USD;
+    document.getElementById('usd-total').innerText = `$${(amount * rate).toFixed(2)}`;
+}
+
+startCamera();
+// Configuration for SE Asia rules
+const regionalConfig = {
+    "Thailand": { currency: "THB", symbol: "฿", tip: "Round up or 20-50 THB. 10% if no service charge." },
+    "Vietnam": { currency: "VND", symbol: "₫", tip: "Not expected, but 10% is kind in tourist areas." },
+    "Singapore": { currency: "SGD", symbol: "S$", tip: "No tipping. 10% service charge is already included." }
+};
+
+let currentCountry = "Thailand"; // Default
+
+function updateLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const { latitude, longitude } = position.coords;
+            
+            // Using a free Reverse Geocoding API to get the country name
+            const geoRes = await fetch(`https://geocode.maps.co/reverse?lat=${latitude}&lon=${longitude}`);
+            const geoData = await geoRes.json();
+            const country = geoData.address.country;
+
+            if (regionalConfig[country]) {
+                currentCountry = country;
+                document.getElementById('tip-advice').innerText = regionalConfig[country].tip;
+                console.log(`Setting app to ${country} mode.`);
+            }
+        });
+    }
+}
+
+// Call this when the app starts
+updateLocation();

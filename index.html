@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SE Asia Travel Assistant</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="app.js" defer></script>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background: #f4f4f9; }
+        #camera-stream { width: 100%; border-radius: 8px; }
+        .result-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <h2>Travel Scanner 📸</h2>
+    <video id="camera-stream" autoplay playsinline></video>
+    <button id="capture-btn">Scan Bill</button>
+    <canvas id="snapshot" style="display:none;"></canvas>
+
+    <div id="output" class="result-card">
+        <p><strong>Total:</strong> <span id="local-total">--</span></p>
+        <p><strong>USD:</strong> <span id="usd-total">--</span></p>
+        <p><strong>Advice:</strong> <span id="tip-advice">Waiting for scan...</span></p>
+    </div>
+</body>
+</html>
