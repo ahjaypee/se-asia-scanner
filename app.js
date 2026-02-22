@@ -70,33 +70,56 @@ function checkCurrencyMatch() {
 awaySelect.addEventListener('change', checkCurrencyMatch);
 homeSelect.addEventListener('change', checkCurrencyMatch);
 
-// 5. The Shutter
-captureBtn.addEventListener('click', async () => {
+/captureBtn.addEventListener('click', async () => {
     if (navigator.vibrate) navigator.vibrate(50);
-    
-    addLog("Scanning Receipt...");
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
-        const priceRegex = /\d+[.,]\d{2}/g;
-        const matches = text.match(priceRegex);
+    addLog("Lighting & Scanning...");
 
-        if (matches) {
-            const total = Math.max(...matches.map(m => parseFloat(m.replace(',', '.'))));
-            document.getElementById('scanned-number').innerText = total;
-            addLog(`Found: ${total} ${awaySelect.value}`);
-            convertCurrency(total, text); // Passing text for future AI use
-        } else {
-            addLog("OCR: No price detected");
+    let track = null;
+    try {
+        // 1. Get the video track to control the flash
+        const stream = video.srcObject;
+        track = stream.getVideoTracks()[0];
+        
+        // 2. Try to turn on the Torch (Flashlight)
+        const capabilities = track.getCapabilities();
+        if (capabilities.torch) {
+            await track.applyConstraints({
+                advanced: [{ torch: true }]
+            });
         }
-    }).catch(err => {
-        addLog("OCR: Error reading image");
-    });
+    } catch (e) {
+        console.log("Torch not supported on this device/browser.");
+    }
+
+    // 3. Brief pause (250ms) to let the camera auto-expose with the new light
+    setTimeout(async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // 4. Turn the Torch OFF immediately after the "snap"
+        if (track) {
+            try {
+                await track.applyConstraints({ advanced: [{ torch: false }] });
+            } catch (e) { /* ignore */ }
+        }
+
+        // 5. Proceed with OCR
+        Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
+            const priceRegex = /\d+[.,]\d{2}/g;
+            const matches = text.match(priceRegex);
+            if (matches) {
+                const total = Math.max(...matches.map(m => parseFloat(m.replace(',', '.'))));
+                document.getElementById('scanned-number').innerText = total;
+                addLog(`Found: ${total} ${awaySelect.value}`);
+                convertCurrency(total, text);
+            } else {
+                addLog("OCR: No price detected");
+            }
+        });
+    }, 250); 
 });
 
 // 6. Currency Conversion
