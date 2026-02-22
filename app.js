@@ -94,37 +94,38 @@ async function processOCR(canvas) {
 
 async function runGeminiCheck(rawText, total, currency) {
     if (!API_KEYS.GEMINI_KEY) {
-        addLog("AI Error: Key missing in config.js");
+        addLog("AI Error: Check config.js for GEMINI_KEY");
         return;
     }
 
-    addLog("Gemini: Analyzing line items...");
-    
-    const promptText = `Analyze receipt: "${rawText}". Total: ${total} ${currency}. Brief math check? 1 short sentence.`;
+    addLog("Gemini: Performing Sanity Check...");
+    const promptText = `Analyze receipt: "${rawText}". Total: ${total} ${currency}. Math check? 1 short sentence.`;
 
     try {
-        // Updated to v1 (Stable) and gemini-1.5-flash
-        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`;
+        // Stable 2026 endpoint for Google Cloud keys
+const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`;
         
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-goog-api-key': API_KEYS.GEMINI_KEY // Passing key in header for better auth
+            },
             body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
         });
 
         const data = await response.json();
 
         if (data.error) {
-            // This will show us if there is still a permissions issue
-            addLog(`Google Logic: ${data.error.message}`);
-        } else if (data.candidates && data.candidates[0].content) {
+            // Detailed debugging for you
+            addLog(`Auth Note: ${data.error.status} - ${data.error.message}`);
+            console.log("Full Error Object:", data.error);
+        } else if (data.candidates) {
             const advice = data.candidates[0].content.parts[0].text;
             document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:bold;">GEMINI:</span> ${advice}`;
-        } else {
-            addLog("AI: Receipt processed successfully.");
         }
-    } catch (err) {
-        addLog("AI Connection Error.");
+    } catch (err) { 
+        addLog("AI: Check failed. See browser console."); 
     }
 }
 
