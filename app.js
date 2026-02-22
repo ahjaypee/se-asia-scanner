@@ -51,19 +51,14 @@ captureBtn.addEventListener('click', async () => {
     const matches = cleanedText.match(priceRegex);
 
     if (matches) {
-        // Convert matches to clean numbers
-        const numericPrices = matches.map(m => {
-            return parseFloat(m.replace(',', '.')); 
-        });
-
-        // Pick the highest number (usually the total)
+        const numericPrices = matches.map(m => parseFloat(m.replace(',', '.')));
         const total = Math.max(...numericPrices);
         
-        document.getElementById('tip-advice').innerText = `Scanned Total: ${total}`;
-        convertCurrency(total);
-    } else {
-        // If we can't find a price, show the first bit of text so we know what it DID see
-        document.getElementById('tip-advice').innerText = "Unclear scan. Saw: " + text.substring(0, 15);
+        // 1. Update the local total box
+        document.getElementById('tip-advice').innerText = `Found Total: ${total}`;
+        
+        // 2. TRIGGER THE CONVERSION
+        convertCurrency(total); 
     }
 });
             console.log("No prices found in: " + text);
@@ -76,12 +71,9 @@ captureBtn.addEventListener('click', async () => {
 setTimeout(startCamera, 1000);
 
 async function convertCurrency(amount) {
-    const apiKey = CONFIG.API_KEY;
-    
-    // This line grabs the currency code (THB, VND, or SGD) from your dropdown
-    const countryCurrency = document.getElementById('country-selector').value; 
-    
     try {
+        const apiKey = CONFIG.API_KEY;
+        const countryCurrency = document.getElementById('country-selector').value;
         const response = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/${countryCurrency}`);
         const data = await response.json();
         
@@ -89,10 +81,12 @@ async function convertCurrency(amount) {
             const rate = data.conversion_rates.USD;
             const usdAmount = (amount * rate).toFixed(2);
             
+            // This line MUST match the ID in your index.html exactly
             document.getElementById('usd-total').innerText = `$${usdAmount}`;
-            document.getElementById('tip-advice').innerText = `Rate: 1 ${countryCurrency} = $${rate.toFixed(6)}`;
+        } else {
+            document.getElementById('usd-total').innerText = "API Error";
         }
     } catch (err) {
-        console.error("API Error:", err);
+        document.getElementById('usd-total').innerText = "Conn. Error";
     }
 }
