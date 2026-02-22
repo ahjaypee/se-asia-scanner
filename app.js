@@ -90,28 +90,30 @@ async function processOCR(canvas) {
 }
 
 async function runGeminiCheck(rawText, total, currency) {
+    // 1. Safety Check: Does the key exist?
+    if (!window.API_KEYS || !API_KEYS.GEMINI_KEY) {
+        addLog("Error: GEMINI_KEY missing in config.js");
+        return;
+    }
+
     addLog("Gemini: Analyzing line items...");
     
-    // Using a very simple prompt to ensure no character encoding issues
-    const promptText = `Receipt text: ${rawText}. Total: ${total} ${currency}. Is the math correct and are there hidden fees? One short sentence only.`;
+    const promptText = `Analyze this receipt: "${rawText}". Total is ${total} ${currency}. Is the math correct? Mention any service charges. One short sentence.`;
 
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: promptText }]
-                }]
+                contents: [{ parts: [{ text: promptText }] }]
             })
         });
 
         const data = await response.json();
 
-        // Check if the API returned an error message (like "Invalid API Key")
+        // 2. Did Google reject the key?
         if (data.error) {
-            addLog(`AI Error: ${data.error.message}`);
-            console.error("Gemini API Error Details:", data.error);
+            addLog(`Google Error: ${data.error.message}`);
             return;
         }
 
@@ -119,11 +121,12 @@ async function runGeminiCheck(rawText, total, currency) {
             const advice = data.candidates[0].content.parts[0].text;
             document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:bold;">GEMINI:</span> ${advice}`;
         } else {
-            addLog("AI: No insight found.");
+            addLog("AI: Scan complete, no notes.");
         }
     } catch (err) {
-        console.error("Fetch Error:", err);
-        addLog("AI Check: Network or Key Error.");
+        // 3. Network or Syntax Error
+        addLog("AI Check: Connection/Syntax Error.");
+        console.error("Full Error Info:", err);
     }
 }
 
