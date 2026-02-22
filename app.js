@@ -52,19 +52,25 @@ captureBtn.addEventListener('click', async () => {
 // 3. The Currency Logic
 async function convertCurrency(amount) {
     try {
-        const apiKey = CONFIG.API_KEY;
-        const currency = document.getElementById('country-selector').value;
+        // Change this line to match your config.js exactly:
+        const apiKey = API_KEYS.CURRENCY_KEY; 
         
-        const response = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/${currency}`);
+        const currency = document.getElementById('country-selector').value;
+        const url = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/${currency}`;
+
+        const response = await fetch(url);
         const data = await response.json();
         
         if (data.result === "success") {
             const rate = data.conversion_rates.USD;
             const usdAmount = (amount * rate).toFixed(2);
-            usdDisplay.innerText = `$${usdAmount}`;
+            document.getElementById('usd-total').innerText = `$${usdAmount}`;
+        } else {
+            document.getElementById('usd-total').innerText = "Key Error";
         }
     } catch (err) {
-        usdDisplay.innerText = "Error";
+        document.getElementById('usd-total').innerText = "Conn. Error";
+        console.error(err);
     }
 }
 
