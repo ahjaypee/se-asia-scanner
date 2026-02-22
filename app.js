@@ -133,7 +133,8 @@ async function convertCurrency(amount) {
     const away = awaySelect.value;
     const home = homeSelect.value;
     try {
-        const url = `https://v6.exchangerate-api.com/v6/${API_KEYS.CURRENCY_KEY}/latest/${away}`;
+        // Ensure it says 'v1' and 'gemini-1.5-flash'
+		const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`;
         const response = await fetch(url);
         const data = await response.json();
         if (data.result === "success") {
