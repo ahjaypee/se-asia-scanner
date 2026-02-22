@@ -4,24 +4,24 @@ const video = document.getElementById('camera-stream');
 
 // This part turns the camera ON as soon as the page loads
 async function startCamera() {
+    // We'll use simpler constraints to ensure it opens on every device
     const constraints = {
-    video: { 
-        facingMode: "environment",
-        width: { ideal: 720 },
-        height: { ideal: 1280 }
-    }
-};
+        video: { facingMode: "environment" },
+        audio: false
+    };
 
     try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const video = document.getElementById('camera-stream');
         video.srcObject = stream;
-        // This line forces the video to play if it's stuck
+        
+        // Force the play command
         video.onloadedmetadata = () => {
-            video.play();
+            video.play().catch(e => console.error("Play failed", e));
         };
     } catch (err) {
-        console.error("Camera error:", err);
-        alert("Camera issue: " + err.name);
+        console.error("Camera Error: ", err);
+        alert("Camera could not start. Please check permissions in your browser settings.");
     }
 }
 captureBtn.addEventListener('click', async () => {
