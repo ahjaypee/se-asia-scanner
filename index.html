@@ -3,112 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Travel Scanner</title>
+    <title>Travel Scanner Pro</title>
     <style>
-        /* Modern Dark Theme Base */
+        :root {
+            --bg: #020617;
+            --card-bg: #0f172a;
+            --accent: #38bdf8;
+            --border: #334155;
+            --text-dim: #94a3b8;
+        }
+
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background: #020617; 
+            font-family: -apple-system, system-ui, sans-serif; 
+            background: var(--bg); 
             color: white; 
-            text-align: center; 
             margin: 0; 
-            padding: 10px; 
+            padding: 10px;
             display: flex;
             justify-content: center;
         }
 
-        /* The App Border / Outer Frame */
         .app-frame { 
-            border: 1px solid #334155; 
-            border-radius: 24px; 
+            border: 1px solid var(--border); 
+            border-radius: 28px; 
             overflow: hidden; 
-            background: #0f172a; 
+            background: var(--card-bg); 
             max-width: 450px; 
             width: 100%;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
         }
 
-        /* Camera Viewport */
         #camera-stream { 
             width: 100%; 
-            height: 35vh; 
+            height: 30vh; 
             background: #000; 
             object-fit: cover; 
-            border-bottom: 1px solid #334155; 
+            border-bottom: 1px solid var(--border); 
         }
 
-        .container { padding: 20px; }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 20px;
+        }
 
-        /* Dropdown Styling */
+        /* Custom Themed Selectors */
         select { 
-            width: 100%; 
-            padding: 12px; 
             background: #1e293b; 
-            color: white; 
-            border-radius: 12px; 
-            border: 1px solid #334155; 
-            margin-bottom: 15px;
-            font-size: 16px;
+            color: var(--accent); 
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            width: 100%;
+            outline: none;
         }
 
-        /* Buttons Row (Side-by-Side) */
-        .button-row { 
-            display: flex; 
-            gap: 12px; 
-            margin-bottom: 20px; 
-        }
+        /* Buttons */
         .btn { 
-            flex: 1; 
             padding: 16px; 
             border-radius: 12px; 
-            font-size: 14px; 
+            font-size: 13px; 
             border: none; 
             font-weight: 800; 
-            cursor: pointer;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
+            transition: all 0.2s;
         }
-        #scanner-button { background: #38bdf8; color: #020617; }
-        #reset-button { background: #334155; color: #94a3b8; }
+        #reset-button { background: #334155; color: var(--text-dim); }
+        #scanner-button { background: var(--accent); color: var(--bg); }
+        
+        .disabled-btn { opacity: 0.2; pointer-events: none; grayscale: 1; }
 
-        /* Results Grid (Side-by-Side Cards) */
-        .results-grid { 
-            display: flex; 
-            justify-content: space-between; 
-            gap: 12px; 
-            margin-bottom: 20px; 
-        }
+        /* Data Cards */
         .stat-card { 
-            flex: 1; 
             background: #1e293b; 
             padding: 15px; 
             border-radius: 16px; 
-            border: 1px solid #334155; 
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            border: 1px solid var(--border);
         }
         
-        .label { 
-            color: #94a3b8; 
-            font-size: 0.65rem; 
-            text-transform: uppercase; 
-            margin-bottom: 4px; 
-            font-weight: 600;
-        }
-        .val { font-size: 1.4rem; font-weight: bold; color: #f8fafc; }
+        .label { color: var(--text-dim); font-size: 0.65rem; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
+        .val { font-size: 1.5rem; font-weight: bold; }
         #usd-total { color: #fbbf24; }
 
-        /* Message Area at Bottom */
+        /* Exchange Rate Info Box */
+        .fyi-row {
+            grid-column: span 2;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
         #tip-advice { 
+            grid-column: span 2;
             background: #020617; 
             padding: 15px; 
             border-radius: 12px; 
-            min-height: 24px; 
-            font-weight: 600; 
-            font-size: 0.95rem;
-            border: 1px dashed #334155;
-            color: #94a3b8;
+            font-size: 0.9rem;
+            border: 1px dashed var(--border);
+            color: var(--text-dim);
         }
     </style>
 </head>
@@ -117,30 +117,43 @@
     <div class="app-frame">
         <video id="camera-stream" autoplay playsinline muted></video>
 
-        <div class="container">
-            <select id="country-selector">
-                <option value="THB">🇹🇭 Thailand (Baht)</option>
-                <option value="VND">🇻🇳 Vietnam (Dong)</option>
-                <option value="SGD">🇸🇬 Singapore (Dollar)</option>
-                <option value="QAR">🇶🇦 Qatar (Riyal)</option>
-                <option value="GBP">🇬🇧 UK (Pound)</option>
-                <option value="EUR">🇪🇺 Europe (Euro)</option>
-            </select>
-
-            <div class="button-row">
-                <button id="scanner-button" class="btn">📸 Scan</button>
-                <button id="reset-button" class="btn">Reset</button>
+        <div class="dashboard-grid">
+            <div>
+                <div class="label">Away (Local)</div>
+                <select id="country-selector">
+                    <option value="THB">🇹🇭 THB</option>
+                    <option value="VND">🇻🇳 VND</option>
+                    <option value="SGD">🇸🇬 SGD</option>
+                    <option value="QAR">🇶🇦 QAR</option>
+                    <option value="GBP">🇬🇧 GBP</option>
+                    <option value="EUR">🇪🇺 EUR</option>
+                    <option value="NZD">🇳🇿 NZD</option>
+                    <option value="AUD">🇦🇺 AUD</option>
+                </select>
+            </div>
+            <div>
+                <div class="label">Home</div>
+                <select id="home-currency">
+                    <option value="USD">🇺🇸 USD</option>
+                    <option value="EUR">🇪🇺 EUR</option>
+                    <option value="GBP">🇬🇧 GBP</option>
+                </select>
             </div>
 
-            <div class="results-grid">
-                <div class="stat-card">
-                    <div class="label">Local Price</div>
-                    <div id="scanned-number" class="val">--</div>
-                </div>
-                <div class="stat-card">
-                    <div class="label">USD Total</div>
-                    <div id="usd-total" class="val">--</div>
-                </div>
+            <button id="reset-button" class="btn">Reset</button>
+            <button id="scanner-button" class="btn">📸 Scan</button>
+
+            <div class="stat-card">
+                <div class="label">Local Price</div>
+                <div id="scanned-number" class="val">--</div>
+            </div>
+            <div class="stat-card">
+                <div id="home-label" class="label">Home Total</div>
+                <div id="usd-total" class="val">--</div>
+            </div>
+
+            <div class="fyi-row" id="rate-display-box">
+                Rate: 1 <span id="rate-away">LOC</span> = <span id="current-rate">--</span> <span id="rate-home">HOM</span>
             </div>
 
             <div id="tip-advice">Ready to scan...</div>

@@ -1,119 +1,109 @@
 const video = document.getElementById('camera-stream');
 const captureBtn = document.getElementById('scanner-button');
-const localDisplay = document.getElementById('tip-advice');
-const usdDisplay = document.getElementById('usd-total');
+const awaySelect = document.getElementById('country-selector');
+const homeSelect = document.getElementById('home-currency');
 
-// 1. Start the Camera
+// 1. Camera & GPS Start
+window.onload = () => {
+    startCamera();
+    autoDetectLocation();
+    checkCurrencyMatch(); // Initial safety check
+};
+
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" }, 
-            audio: false 
+            video: { facingMode: "environment" }, audio: false 
         });
         video.srcObject = stream;
         video.play();
-    } catch (err) {
-        console.error("Camera Error: ", err);
+    } catch (err) { console.error(err); }
+}
+
+// 2. Location Intelligence
+function autoDetectLocation() {
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            console.log("GPS Location acquired. Mapping to local currency...");
+            // Future: Integration with reverse-geocoding API
+        });
     }
 }
 
-// 2. The Shutter Logic (Taking the photo and reading it)
+// 3. Safety Check: Dim button if Currencies Match
+function checkCurrencyMatch() {
+    const isSame = awaySelect.value === homeSelect.value;
+    captureBtn.classList.toggle('disabled-btn', isSame);
+    if (isSame) {
+        document.getElementById('tip-advice').innerText = "Select different Away/Home currencies.";
+    } else {
+        document.getElementById('tip-advice').innerText = "Ready...";
+    }
+}
+
+awaySelect.addEventListener('change', checkCurrencyMatch);
+homeSelect.addEventListener('change', checkCurrencyMatch);
+
+// 4. The Shutter (Scan)
 captureBtn.addEventListener('click', async () => {
-    localDisplay.innerText = "Processing Image...";
+    // Haptic feedback (Like a Z8 shutter click)
+    if (navigator.vibrate) navigator.vibrate(50);
+    
+    document.getElementById('tip-advice').innerText = "OCR: Reading Receipt...";
     
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    const ctx = canvas.width > 0 ? canvas.getContext('2d') : null;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
+        const priceRegex = /\d+[.,]\d{2}/g;
+        const matches = text.match(priceRegex);
 
-    if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
-            console.log("Read text:", text);
-            
-            const priceRegex = /\d+[.,]\d{2}/g;
-            const matches = text.match(priceRegex);
-
-            if (matches) {
-                const total = Math.max(...matches.map(m => parseFloat(m.replace(',', '.'))));
-                document.getElementById('scanned-number').innerText = total;
-                document.getElementById('tip-advice').innerText = "Calculating USD...";
-                convertCurrency(total);
-            } else {
-                localDisplay.innerText = "Price not found. Try again!";
-            }
-        });
-    }
+        if (matches) {
+            const total = Math.max(...matches.map(m => parseFloat(m.replace(',', '.'))));
+            document.getElementById('scanned-number').innerText = total;
+            convertCurrency(total);
+        } else {
+            document.getElementById('tip-advice').innerText = "No price found. Adjust angle!";
+        }
+    });
 });
 
-// 3. The Currency Logic with Global Rip-off Verdicts
+// 5. Currency Logic
 async function convertCurrency(amount) {
-    if (typeof API_KEYS === 'undefined') {
-        document.getElementById('usd-total').innerText = "Config Loading...";
-        return;
-    }
-
+    const away = awaySelect.value;
+    const home = homeSelect.value;
+    
     try {
-        const apiKey = API_KEYS.CURRENCY_KEY; 
-        const currency = document.getElementById('country-selector').value;
-        const url = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/${currency}`;
-
+        const url = `https://v6.exchangerate-api.com/v6/${API_KEYS.CURRENCY_KEY}/latest/${away}`;
         const response = await fetch(url);
         const data = await response.json();
         
         if (data.result === "success") {
-            const rate = data.conversion_rates.USD;
-            const usdAmount = parseFloat((amount * rate).toFixed(2));
+            const rate = data.conversion_rates[home];
+            const result = (amount * rate).toFixed(2);
             
-            document.getElementById('usd-total').innerText = `$${usdAmount}`;
+            // Update UI
+            document.getElementById('usd-total').innerText = result;
+            document.getElementById('home-label').innerText = `${home} Total`;
+            
+            // Update FYI Rate
+            document.getElementById('current-rate').innerText = rate.toFixed(4);
+            document.getElementById('rate-away').innerText = away;
+            document.getElementById('rate-home').innerText = home;
 
-            const tipElement = document.getElementById('tip-advice');
-            let verdict = "";
-            let verdictColor = "#4ade80"; // Default Green
-
-            // New Nuanced Rip-off Logic for Global Stops
-            if (currency === "VND" && usdAmount > 15) {
-                verdict = "⚠️ High for Vietnam!";
-                verdictColor = "#f87171"; // Red
-            } else if (currency === "THB" && usdAmount > 20) {
-                verdict = "⚠️ Tourist price alert!";
-                verdictColor = "#fbbf24"; // Yellow
-            } else if (currency === "SGD" && usdAmount > 25) {
-                verdict = "⚠️ Steep for Singapore!";
-                verdictColor = "#f87171"; 
-            } else if (currency === "QAR" && usdAmount > 30) {
-                verdict = "⚠️ Pricey for Doha!";
-                verdictColor = "#fbbf24";
-            } else if ((currency === "GBP" || currency === "EUR") && usdAmount > 45) {
-                verdict = "⚠️ Expensive for a meal!";
-                verdictColor = "#f87171";
-            } else {
-                verdict = "✅ Looks like a fair deal.";
-                verdictColor = "#4ade80"; 
-            }
-
-            tipElement.innerText = verdict;
-            tipElement.style.color = verdictColor;
-
-        } else {
-            document.getElementById('usd-total').innerText = "Invalid Key";
+            // Trigger AI (We'll build this function next!)
+            // runAISanityCheck(text, amount, away, home);
         }
-    } catch (err) {
-        document.getElementById('usd-total').innerText = "Err: " + err.message.substring(0, 10);
-    }
+    } catch (err) { console.error(err); }
 }
 
-// 4. Reset Button Logic
+// 6. Reset
 document.getElementById('reset-button').addEventListener('click', () => {
     document.getElementById('scanned-number').innerText = "--";
-    const tipElement = document.getElementById('tip-advice');
-    tipElement.innerText = "Ready to scan...";
-    tipElement.style.color = "#94a3b8"; 
     document.getElementById('usd-total').innerText = "--";
+    document.getElementById('current-rate').innerText = "--";
+    document.getElementById('tip-advice').innerText = "Ready...";
 });
-
-// 5. Start Up
-window.onload = () => {
-    startCamera();
-};
