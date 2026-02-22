@@ -51,10 +51,14 @@ captureBtn.addEventListener('click', async () => {
 
 // 3. The Currency Logic
 async function convertCurrency(amount) {
+    // Add this safety check at the very top of the function
+    if (typeof API_KEYS === 'undefined') {
+        document.getElementById('usd-total').innerText = "Config Loading...";
+        return;
+    }
+
     try {
-        // Change this line to match your config.js exactly:
         const apiKey = API_KEYS.CURRENCY_KEY; 
-        
         const currency = document.getElementById('country-selector').value;
         const url = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/${currency}`;
 
@@ -66,12 +70,15 @@ async function convertCurrency(amount) {
             const usdAmount = (amount * rate).toFixed(2);
             document.getElementById('usd-total').innerText = `$${usdAmount}`;
         } else {
-            document.getElementById('usd-total').innerText = "Key Error";
+            document.getElementById('usd-total').innerText = "Invalid Key";
         }
-    } catch (err) {
-        document.getElementById('usd-total').innerText = "Conn. Error";
-        console.error(err);
+   } catch (err) {
+        // This will display the actual error message on your phone screen
+        document.getElementById('usd-total').innerText = "Err: " + err.message.substring(0, 10);
     }
 }
 
-startCamera();
+// This ensures the page is fully loaded before we turn the camera on
+window.onload = () => {
+    startCamera();
+};
