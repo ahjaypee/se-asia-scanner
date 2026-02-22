@@ -11,6 +11,7 @@
             --accent: #38bdf8;
             --border: #1e293b;
             --text-dim: #94a3b8;
+            --gold: #fbbf24;
         }
 
         body { 
@@ -23,52 +24,59 @@
             width: 100%; max-width: 450px; display: flex; flex-direction: column; background: var(--bg);
         }
 
-        /* Fixed Camera Section */
+        /* Camera Viewfinder */
         #camera-container {
             width: 100%; height: 45vh; background: #000; position: relative; border-bottom: 2px solid var(--accent);
+            display: flex; align-items: center; justify-content: center;
         }
         #camera-stream { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Scrollable Controls Section */
+        /* Controls Area */
         .controls-area {
-            flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px;
+            flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px;
         }
 
-        .row { display: flex; gap: 10px; align-items: flex-end; }
-        .col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .row { display: flex; gap: 12px; align-items: flex-end; }
+        .col { flex: 1; display: flex; flex-direction: column; gap: 5px; }
 
-        .label { color: var(--text-dim); font-size: 0.7rem; text-transform: uppercase; font-weight: bold; }
+        .label { color: var(--text-dim); font-size: 0.7rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }
 
+        /* Symmetrical Selectors */
         select { 
             background: var(--card-bg); color: var(--accent); border: 1px solid var(--border);
-            padding: 10px; border-radius: 8px; font-size: 14px; width: 100%; outline: none;
+            padding: 12px; border-radius: 10px; font-size: 15px; width: 100%; outline: none;
+            font-weight: bold;
         }
 
+        /* Action Buttons */
         .btn { 
-            padding: 15px; border-radius: 10px; font-size: 13px; border: none; font-weight: 800; 
-            text-transform: uppercase; cursor: pointer; flex: 1;
+            padding: 18px; border-radius: 12px; font-size: 13px; border: none; font-weight: 800; 
+            text-transform: uppercase; cursor: pointer; flex: 1; transition: all 0.2s;
         }
         #reset-button { background: #334155; color: var(--text-dim); }
         #scanner-button { background: var(--accent); color: var(--bg); }
-        .disabled-btn { opacity: 0.2; pointer-events: none; }
+        .disabled-btn { opacity: 0.2; pointer-events: none; filter: grayscale(1); }
 
+        /* Data Result Chips */
         .stat-card { 
-            background: var(--card-bg); padding: 12px; border-radius: 12px; border: 1px solid var(--border); flex: 1;
+            background: var(--card-bg); padding: 15px; border-radius: 14px; border: 1px solid var(--border); flex: 1;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);
         }
-        .val { font-size: 1.4rem; font-weight: bold; margin-top: 4px; }
+        .val { font-size: 1.3rem; font-weight: 900; margin-top: 5px; white-space: nowrap; }
         
+        /* Exchange Rate FYI */
         .fyi-box { 
-            font-size: 0.75rem; color: var(--text-dim); text-align: center; 
-            padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; 
+            font-size: 0.8rem; color: var(--text-dim); text-align: center; 
+            padding: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; border: 1px solid var(--border);
         }
 
-        /* Log Box */
+        /* Event Log/AI Area */
         #log-container {
-            background: #000; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
-            min-height: 40px; cursor: pointer;
+            background: #000; padding: 15px; border-radius: 12px; border: 1px dashed var(--border);
+            min-height: 50px; display: flex; align-items: center; justify-content: center;
         }
-        .log-entry { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 2px; }
-        .latest { color: var(--accent); font-weight: bold; }
+        .log-entry { font-size: 0.85rem; color: var(--text-dim); text-align: center; }
+        .latest { color: var(--accent); font-weight: 600; }
     </style>
 </head>
 <body>
@@ -81,24 +89,33 @@
     <div class="controls-area">
         <div class="row">
             <div class="col">
-                <div class="label">Away Currency</div>
+                <div class="label">Away (Local)</div>
                 <select id="country-selector">
-                    <option value="THB">🇹🇭 THB</option>
+                    <option value="USD">🇺🇸 USD</option>
+                    <option value="CAD">🇨🇦 CAD</option>
+                    <option value="EUR">🇪🇺 EUR</option>
+                    <option value="GBP">🇬🇧 GBP</option>
+                    <option value="THB" selected>🇹🇭 THB</option>
                     <option value="VND">🇻🇳 VND</option>
                     <option value="SGD">🇸🇬 SGD</option>
                     <option value="QAR">🇶🇦 QAR</option>
-                    <option value="GBP">🇬🇧 GBP</option>
-                    <option value="EUR">🇪🇺 EUR</option>
                     <option value="NZD">🇳🇿 NZD</option>
                     <option value="AUD">🇦🇺 AUD</option>
                 </select>
             </div>
             <div class="col">
-                <div class="label">Home Currency</div>
+                <div class="label">Home</div>
                 <select id="home-currency">
                     <option value="USD" selected>🇺🇸 USD</option>
+                    <option value="CAD">🇨🇦 CAD</option>
                     <option value="EUR">🇪🇺 EUR</option>
                     <option value="GBP">🇬🇧 GBP</option>
+                    <option value="AUD">🇦🇺 AUD</option>
+                    <option value="NZD">🇳🇿 NZD</option>
+                    <option value="THB">🇹🇭 THB</option>
+                    <option value="VND">🇻🇳 VND</option>
+                    <option value="SGD">🇸🇬 SGD</option>
+                    <option value="QAR">🇶🇦 QAR</option>
                 </select>
             </div>
         </div>
@@ -110,12 +127,12 @@
 
         <div class="row">
             <div class="stat-card">
-                <div class="label">Scanned Amt</div>
+                <div class="label" id="away-label-text">Scanned Amt</div>
                 <div id="scanned-number" class="val">--</div>
             </div>
             <div class="stat-card">
-                <div class="label">Home Total</div>
-                <div id="usd-total" class="val" style="color:#fbbf24">--</div>
+                <div class="label" id="home-label-text">Home Total</div>
+                <div id="usd-total" class="val" style="color:var(--gold)">--</div>
             </div>
         </div>
 
@@ -124,8 +141,7 @@
         </div>
 
         <div id="log-container">
-            <div id="latest-message" class="log-entry latest">Initializing...</div>
-            <div id="log-history" style="display:none"></div>
+            <div id="latest-message" class="log-entry latest">Initializing System...</div>
         </div>
     </div>
 </div>

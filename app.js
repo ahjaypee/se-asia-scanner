@@ -2,44 +2,52 @@ const video = document.getElementById('camera-stream');
 const captureBtn = document.getElementById('scanner-button');
 const awaySelect = document.getElementById('country-selector');
 const homeSelect = document.getElementById('home-currency');
-let eventLog = [];
 let streamTrack = null;
 
 window.onload = () => {
     startCamera();
+    detectHomeBasedOnGPS(); // Auto-select "Away" based on where you are
     checkCurrencyMatch();
 };
 
 async function startCamera() {
-    addLog("Requesting Camera...");
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" }, audio: false 
+            video: { facingMode: "environment", focusMode: "continuous" }, audio: false 
         });
         video.srcObject = stream;
         streamTrack = stream.getVideoTracks()[0];
-        
         video.onloadedmetadata = () => video.play();
-        video.style.display = "block"; // Ensure video is visible
-        addLog("Camera Live");
-    } catch (err) {
-        addLog("Camera Access Denied");
+        video.style.display = "block";
+        addLog("Camera Ready");
+    } catch (err) { addLog("Camera Error"); }
+}
+
+// 1. GPS Detection Logic
+async function detectHomeBasedOnGPS() {
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            addLog("GPS Found: Determining Local Currency...");
+            // In a real trip, we would use reverse-geocoding here.
+            // For now, if you are in Maryland, let's keep it USD.
+            // If the GPS coords are outside the US, we could auto-switch to THB/EUR.
+        });
     }
 }
 
-// 4. THE SHUTTER (With Torch and Auto-Off)
+// 2. The "Pro" Shutter (With Exposure Delay)
 captureBtn.addEventListener('click', async () => {
     if (navigator.vibrate) navigator.vibrate(50);
-    addLog("Capturing...");
+    addLog("Lighting & Focusing...");
 
-    // Try to pulse the Torch
+    // Fire the Torch
     if (streamTrack && streamTrack.getCapabilities().torch) {
-        try {
-            await streamTrack.applyConstraints({ advanced: [{ torch: true }] });
-        } catch (e) { console.log("Torch failed"); }
+        await streamTrack.applyConstraints({ advanced: [{ torch: true }] });
     }
 
-    // Short delay for exposure adjustment
+    // PHOTOGRAPHY TIP: We wait 600ms now. 
+    // This allows the camera's Auto-Exposure (AE) and Auto-Focus (AF) to lock 
+    // onto the illuminated receipt so the image isn't a white blur.
     setTimeout(async () => {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
@@ -47,32 +55,37 @@ captureBtn.addEventListener('click', async () => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // TURN OFF TORCH AND CAMERA
+        // Snap complete: Turn off hardware
         if (streamTrack) {
-            try {
-                await streamTrack.applyConstraints({ advanced: [{ torch: false }] });
-                streamTrack.stop(); // This kills the camera hardware
-                video.style.display = "none"; // Hide the black video box
-                addLog("Camera Off - Processing");
-            } catch (e) { }
+            await streamTrack.applyConstraints({ advanced: [{ torch: false }] });
+            streamTrack.stop();
+            video.style.display = "none";
+            addLog("Processing Photo...");
         }
 
-        Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
-            const priceRegex = /\d+[.,]\d{2}/g;
-            const matches = text.match(priceRegex);
-
-            if (matches) {
-                const total = Math.max(...matches.map(m => parseFloat(m.replace(',', '.'))));
-                document.getElementById('scanned-number').innerText = total;
-                convertCurrency(total);
-            } else {
-                addLog("No Price Found - Reset to try again");
-            }
-        });
-    }, 300);
+        processOCR(canvas);
+    }, 600); 
 });
 
-async function convertCurrency(amount) {
+function processOCR(canvas) {
+    Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
+        const priceRegex = /\d+[.,]\d{2}/g;
+        const matches = text.match(priceRegex);
+
+        if (matches) {
+            const total = Math.max(...matches.map(m => parseFloat(m.replace(',', '.'))));
+            
+            // Update UI Labels with currency codes
+            document.getElementById('scanned-number').innerText = `${total} ${awaySelect.value}`;
+            addLog("Price Found");
+            convertCurrency(total, text);
+        } else {
+            addLog("OCR Failed: No price. Resetting...");
+        }
+    });
+}
+
+async function convertCurrency(amount, rawText) {
     const away = awaySelect.value;
     const home = homeSelect.value;
     try {
@@ -82,30 +95,38 @@ async function convertCurrency(amount) {
         
         if (data.result === "success") {
             const rate = data.conversion_rates[home];
-            document.getElementById('usd-total').innerText = (amount * rate).toFixed(2);
+            const result = (amount * rate).toFixed(2);
+            
+            // Display with Currency Code
+            document.getElementById('usd-total').innerText = `${result} ${home}`;
             document.getElementById('current-rate').innerText = rate.toFixed(2);
             document.getElementById('rate-away').innerText = away;
             document.getElementById('rate-home').innerText = home;
-            addLog("Success! Press Reset for next scan.");
+
+            // Update Labels
+            document.getElementById('away-label-text').innerText = `${away} Total`;
+            document.getElementById('home-label-text').innerText = `${home} Equiv`;
+
+            // NEXT: AI Sanity Check
+            runAISanityCheck(rawText, result, home);
         }
-    } catch (err) { addLog("API Error"); }
+    } catch (err) { addLog("Conversion Failed"); }
+}
+
+// AI Integration Placeholder
+async function runAISanityCheck(text, amount, currency) {
+    addLog("Gemini is analyzing receipt...");
+    // We will build this Gemini call next!
 }
 
 document.getElementById('reset-button').addEventListener('click', () => {
-    document.getElementById('scanned-number').innerText = "--";
-    document.getElementById('usd-total').innerText = "--";
-    startCamera(); // Re-start the camera for the next scan
-    addLog("System Reset - Camera On");
+    location.reload(); // Simplest way to restart camera and clear variables
 });
 
 function addLog(msg) {
     document.getElementById('latest-message').innerText = msg;
-    const now = new Date().toLocaleTimeString();
-    eventLog.unshift(`[${now}] ${msg}`);
-    if (eventLog.length > 5) eventLog.pop();
 }
 
 function checkCurrencyMatch() {
-    const isSame = awaySelect.value === homeSelect.value;
-    captureBtn.classList.toggle('disabled-btn', isSame);
+    captureBtn.classList.toggle('disabled-btn', awaySelect.value === homeSelect.value);
 }
