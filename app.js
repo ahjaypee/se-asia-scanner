@@ -47,7 +47,7 @@ captureBtn.addEventListener('click', async () => {
     }
 });
 
-// 3. The Currency Logic
+// 3. The Currency Logic with Global Rip-off Verdicts
 async function convertCurrency(amount) {
     if (typeof API_KEYS === 'undefined') {
         document.getElementById('usd-total').innerText = "Config Loading...";
@@ -70,17 +70,24 @@ async function convertCurrency(amount) {
 
             const tipElement = document.getElementById('tip-advice');
             let verdict = "";
-            let verdictColor = "#4ade80"; 
+            let verdictColor = "#4ade80"; // Default Green
 
+            // New Nuanced Rip-off Logic for Global Stops
             if (currency === "VND" && usdAmount > 15) {
                 verdict = "⚠️ High for Vietnam!";
-                verdictColor = "#f87171"; 
+                verdictColor = "#f87171"; // Red
+            } else if (currency === "THB" && usdAmount > 20) {
+                verdict = "⚠️ Tourist price alert!";
+                verdictColor = "#fbbf24"; // Yellow
             } else if (currency === "SGD" && usdAmount > 25) {
                 verdict = "⚠️ Steep for Singapore!";
                 verdictColor = "#f87171"; 
-            } else if (currency === "THB" && usdAmount > 20) {
-                verdict = "⚠️ Tourist price alert!";
-                verdictColor = "#fbbf24"; 
+            } else if (currency === "QAR" && usdAmount > 30) {
+                verdict = "⚠️ Pricey for Doha!";
+                verdictColor = "#fbbf24";
+            } else if ((currency === "GBP" || currency === "EUR") && usdAmount > 45) {
+                verdict = "⚠️ Expensive for a meal!";
+                verdictColor = "#f87171";
             } else {
                 verdict = "✅ Looks like a fair deal.";
                 verdictColor = "#4ade80"; 
@@ -97,7 +104,7 @@ async function convertCurrency(amount) {
     }
 }
 
-// 4. Reset Button Logic (Clean Version)
+// 4. Reset Button Logic
 document.getElementById('reset-button').addEventListener('click', () => {
     document.getElementById('scanned-number').innerText = "--";
     const tipElement = document.getElementById('tip-advice');
