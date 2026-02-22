@@ -40,12 +40,46 @@ captureBtn.addEventListener('click', async () => {
 
     // 4. Send the photo to Tesseract (the OCR brain)
     Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
-        console.log(text);
-        document.getElementById('tip-advice').innerText = "Scan Complete!";
-        // This is where we will put the math logic next!
+        console.log("Found text:", text);
+        
+        // 1. Find numbers that look like prices (e.g., 100.00 or 50,00)
+        const priceRegex = /\d+[.,]\d{2}/g;
+        const prices = text.match(priceRegex);
+
+        if (prices) {
+            // 2. Convert them to actual numbers and find the highest one (the Total)
+            const numericPrices = prices.map(p => parseFloat(p.replace(',', '')));
+            const total = Math.max(...numericPrices);
+            
+            // 3. Display the local total
+            document.getElementById('tip-advice').innerText = `Scanned Total: ${total}`;
+            
+            // 4. Run the conversion (We'll add this function next)
+            convertCurrency(total);
+        } else {
+            document.getElementById('tip-advice').innerText = "Total not found. Try a clearer photo!";
+        }
     });
 });
 
 // Move this to the very last line
 // Wait 1 second for the page to settle before turning on the lens
 setTimeout(startCamera, 1000);
+
+async function convertCurrency(amount) {
+    const apiKey = 'b5af70e98175c3764fda6084'; // Use your real key from config.js
+    const countryCurrency = "THB"; // We'll start with Thailand as a test
+    
+    try {
+        const response = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/${countryCurrency}`);
+        const data = await response.json();
+        const rate = data.conversion_rates.USD;
+        const usdAmount = (amount * rate).toFixed(2);
+        
+        document.getElementById('usd-total').innerText = `$${usdAmount}`;
+        document.getElementById('tip-advice').innerText = `Success! ${amount} ${countryCurrency} is $${usdAmount} USD.`;
+    } catch (err) {
+        document.getElementById('usd-total').innerText = "Error";
+        console.error(err);
+    }
+}
