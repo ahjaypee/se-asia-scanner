@@ -2,133 +2,74 @@ const video = document.getElementById('camera-stream');
 const captureBtn = document.getElementById('scanner-button');
 const awaySelect = document.getElementById('country-selector');
 const homeSelect = document.getElementById('home-currency');
-
 let eventLog = [];
 
-// 1. Startup Logic
 window.onload = () => {
     startCamera();
     checkCurrencyMatch();
-    addLog("System Ready");
 };
 
-// 2. Camera Initialization (Enhanced for Mobile)
 async function startCamera() {
-    addLog("Attempting Camera Access...");
+    addLog("Requesting Camera...");
     try {
-        const constraints = { 
-            video: { 
-                facingMode: "environment",
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
-            }, 
-            audio: false 
-        };
-        
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        
-        // Essential for iOS Portrait mode
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment" }, audio: false 
+        });
         video.srcObject = stream;
-        video.setAttribute("playsinline", true); 
-        video.play();
-        
+        // The play() call is crucial after setting srcObject
+        video.onloadedmetadata = () => video.play();
         addLog("Camera Live");
     } catch (err) {
-        addLog("Camera Error: Check Permissions");
-        console.error("Detailed Camera Error:", err);
+        addLog("Camera Access Denied");
+        console.error(err);
     }
 }
 
-// 3. Event Log Manager
 function addLog(msg) {
-    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const logEntry = `[${now}] ${msg}`;
-    
     document.getElementById('latest-message').innerText = msg;
-    
-    eventLog.unshift(logEntry);
-    if (eventLog.length > 10) eventLog.pop();
-    
-    const historyBox = document.getElementById('log-history');
-    if(historyBox) {
-        historyBox.innerHTML = eventLog.map(entry => `<div class="log-entry">${entry}</div>`).join('');
-    }
+    const now = new Date().toLocaleTimeString();
+    eventLog.unshift(`[${now}] ${msg}`);
+    if (eventLog.length > 5) eventLog.pop();
 }
 
-// 4. Safety Check
 function checkCurrencyMatch() {
     const isSame = awaySelect.value === homeSelect.value;
     captureBtn.classList.toggle('disabled-btn', isSame);
-    
-    if (isSame) {
-        addLog("Error: Currencies Match");
-    } else {
-        addLog(`Ready: ${awaySelect.value} to ${homeSelect.value}`);
-    }
+    addLog(isSame ? "Set different currencies" : `Ready: ${awaySelect.value} to ${homeSelect.value}`);
 }
 
 awaySelect.addEventListener('change', checkCurrencyMatch);
 homeSelect.addEventListener('change', checkCurrencyMatch);
 
-/captureBtn.addEventListener('click', async () => {
+captureBtn.addEventListener('click', async () => {
     if (navigator.vibrate) navigator.vibrate(50);
-    addLog("Lighting & Scanning...");
+    addLog("Capturing...");
 
-    let track = null;
-    try {
-        // 1. Get the video track to control the flash
-        const stream = video.srcObject;
-        track = stream.getVideoTracks()[0];
-        
-        // 2. Try to turn on the Torch (Flashlight)
-        const capabilities = track.getCapabilities();
-        if (capabilities.torch) {
-            await track.applyConstraints({
-                advanced: [{ torch: true }]
-            });
+    // Capture Image
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    addLog("Analyzing Text...");
+    Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
+        const priceRegex = /\d+[.,]\d{2}/g;
+        const matches = text.match(priceRegex);
+
+        if (matches) {
+            const total = Math.max(...matches.map(m => parseFloat(m.replace(',', '.'))));
+            document.getElementById('scanned-number').innerText = total;
+            convertCurrency(total);
+        } else {
+            addLog("No Price Found");
         }
-    } catch (e) {
-        console.log("Torch not supported on this device/browser.");
-    }
-
-    // 3. Brief pause (250ms) to let the camera auto-expose with the new light
-    setTimeout(async () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        // 4. Turn the Torch OFF immediately after the "snap"
-        if (track) {
-            try {
-                await track.applyConstraints({ advanced: [{ torch: false }] });
-            } catch (e) { /* ignore */ }
-        }
-
-        // 5. Proceed with OCR
-        Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
-            const priceRegex = /\d+[.,]\d{2}/g;
-            const matches = text.match(priceRegex);
-            if (matches) {
-                const total = Math.max(...matches.map(m => parseFloat(m.replace(',', '.'))));
-                document.getElementById('scanned-number').innerText = total;
-                addLog(`Found: ${total} ${awaySelect.value}`);
-                convertCurrency(total, text);
-            } else {
-                addLog("OCR: No price detected");
-            }
-        });
-    }, 250); 
+    });
 });
 
-// 6. Currency Conversion
-async function convertCurrency(amount, rawText) {
+async function convertCurrency(amount) {
     const away = awaySelect.value;
     const home = homeSelect.value;
-    
-    addLog("Fetching Rates...");
-
     try {
         const url = `https://v6.exchangerate-api.com/v6/${API_KEYS.CURRENCY_KEY}/latest/${away}`;
         const response = await fetch(url);
@@ -136,24 +77,17 @@ async function convertCurrency(amount, rawText) {
         
         if (data.result === "success") {
             const rate = data.conversion_rates[home];
-            const result = (amount * rate).toFixed(2);
-            
-            document.getElementById('usd-total').innerText = result;
+            document.getElementById('usd-total').innerText = (amount * rate).toFixed(2);
             document.getElementById('current-rate').innerText = rate.toFixed(2);
             document.getElementById('rate-away').innerText = away;
             document.getElementById('rate-home').innerText = home;
-
-            addLog(`Done: ${result} ${home}`);
+            addLog("Conversion Success");
         }
-    } catch (err) {
-        addLog("Network Error");
-    }
+    } catch (err) { addLog("API Error"); }
 }
 
-// 7. Reset
 document.getElementById('reset-button').addEventListener('click', () => {
     document.getElementById('scanned-number').innerText = "--";
     document.getElementById('usd-total').innerText = "--";
-    document.getElementById('current-rate').innerText = "--";
-    addLog("Cleared");
+    addLog("Reset Complete");
 });

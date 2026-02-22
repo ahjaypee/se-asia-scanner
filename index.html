@@ -1,82 +1,138 @@
-<style>
-    /* Enlarged Portrait Camera */
-    #camera-stream { 
-        width: 100%; 
-        height: 50vh; /* Reverting to a larger portrait view */
-        background: #000; 
-        object-fit: cover; 
-        border-bottom: 1px solid var(--border); 
-    }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Travel Scanner Pro</title>
+    <style>
+        :root {
+            --bg: #020617;
+            --card-bg: #0f172a;
+            --accent: #38bdf8;
+            --border: #1e293b;
+            --text-dim: #94a3b8;
+        }
 
-    /* Styled Selectors to minimize "White Pop" */
-    select { 
-        background: #1e293b; 
-        color: var(--accent); 
-        border: 1px solid var(--border);
-        padding: 10px;
-        border-radius: 8px;
-        font-weight: bold;
-        width: 100%;
-        font-size: 14px;
-        -webkit-appearance: none; /* Helps with custom styling on iOS/Android */
-    }
+        body { 
+            font-family: -apple-system, system-ui, sans-serif; 
+            background: var(--bg); color: white; margin: 0; padding: 0;
+            display: flex; justify-content: center; height: 100vh; overflow: hidden;
+        }
 
-    /* Event Log Styling */
-    #log-container {
-        grid-column: span 2;
-        background: #020617;
-        padding: 12px;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        cursor: pointer;
-        max-height: 40px;
-        overflow: hidden;
-        transition: max-height 0.3s ease;
-    }
-    #log-container.open { max-height: 200px; overflow-y: auto; }
-    .log-entry { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px; text-align: left; }
-    .log-entry.latest { color: var(--accent); font-weight: bold; }
-</style>
+        .app-frame { 
+            width: 100%; max-width: 450px; display: flex; flex-direction: column; background: var(--bg);
+        }
+
+        /* Fixed Camera Section */
+        #camera-container {
+            width: 100%; height: 45vh; background: #000; position: relative; border-bottom: 2px solid var(--accent);
+        }
+        #camera-stream { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Scrollable Controls Section */
+        .controls-area {
+            flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px;
+        }
+
+        .row { display: flex; gap: 10px; align-items: flex-end; }
+        .col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+
+        .label { color: var(--text-dim); font-size: 0.7rem; text-transform: uppercase; font-weight: bold; }
+
+        select { 
+            background: var(--card-bg); color: var(--accent); border: 1px solid var(--border);
+            padding: 10px; border-radius: 8px; font-size: 14px; width: 100%; outline: none;
+        }
+
+        .btn { 
+            padding: 15px; border-radius: 10px; font-size: 13px; border: none; font-weight: 800; 
+            text-transform: uppercase; cursor: pointer; flex: 1;
+        }
+        #reset-button { background: #334155; color: var(--text-dim); }
+        #scanner-button { background: var(--accent); color: var(--bg); }
+        .disabled-btn { opacity: 0.2; pointer-events: none; }
+
+        .stat-card { 
+            background: var(--card-bg); padding: 12px; border-radius: 12px; border: 1px solid var(--border); flex: 1;
+        }
+        .val { font-size: 1.4rem; font-weight: bold; margin-top: 4px; }
+        
+        .fyi-box { 
+            font-size: 0.75rem; color: var(--text-dim); text-align: center; 
+            padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; 
+        }
+
+        /* Log Box */
+        #log-container {
+            background: #000; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+            min-height: 40px; cursor: pointer;
+        }
+        .log-entry { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 2px; }
+        .latest { color: var(--accent); font-weight: bold; }
+    </style>
+</head>
+<body>
 
 <div class="app-frame">
-    <video id="camera-stream" autoplay playsinline muted></video>
+    <div id="camera-container">
+        <video id="camera-stream" autoplay playsinline muted></video>
+    </div>
 
-    <div class="dashboard-grid">
-        <div class="label" style="text-align: left;">Away Currency</div>
-        <div class="label" style="text-align: left;">Home Currency</div>
+    <div class="controls-area">
+        <div class="row">
+            <div class="col">
+                <div class="label">Away Currency</div>
+                <select id="country-selector">
+                    <option value="THB">🇹🇭 THB</option>
+                    <option value="VND">🇻🇳 VND</option>
+                    <option value="SGD">🇸🇬 SGD</option>
+                    <option value="QAR">🇶🇦 QAR</option>
+                    <option value="GBP">🇬🇧 GBP</option>
+                    <option value="EUR">🇪🇺 EUR</option>
+                    <option value="NZD">🇳🇿 NZD</option>
+                    <option value="AUD">🇦🇺 AUD</option>
+                </select>
+            </div>
+            <div class="col">
+                <div class="label">Home Currency</div>
+                <select id="home-currency">
+                    <option value="USD" selected>🇺🇸 USD</option>
+                    <option value="EUR">🇪🇺 EUR</option>
+                    <option value="GBP">🇬🇧 GBP</option>
+                </select>
+            </div>
+        </div>
 
-        <select id="country-selector">
-            <option value="THB">🇹🇭 THB</option>
-            <option value="VND">🇻🇳 VND</option>
-            <option value="SGD">🇸🇬 SGD</option>
-            <option value="QAR">🇶🇦 QAR</option>
-            <option value="GBP">🇬🇧 GBP</option>
-            <option value="EUR">🇪🇺 EUR</option>
-            <option value="NZD">🇳🇿 NZD</option>
-            <option value="AUD">🇦🇺 AUD</option>
-        </select>
-        <select id="home-currency">
-            <option value="USD">🇺🇸 USD</option>
-            <option value="EUR">🇪🇺 EUR</option>
-            <option value="GBP">🇬🇧 GBP</option>
-        </select>
+        <div class="row">
+            <button id="reset-button" class="btn">Reset</button>
+            <button id="scanner-button" class="btn">📸 Scan</button>
+        </div>
 
-        <button id="reset-button" class="btn">RESET</button>
-        <button id="scanner-button" class="btn">📸 SCAN</button>
+        <div class="row">
+            <div class="stat-card">
+                <div class="label">Scanned Amt</div>
+                <div id="scanned-number" class="val">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Home Total</div>
+                <div id="usd-total" class="val" style="color:#fbbf24">--</div>
+            </div>
+        </div>
 
-        <div class="label" style="text-align: left;">Scanned Amt</div>
-        <div class="label" style="text-align: left;">Home Total</div>
-
-        <div class="stat-card"><div id="scanned-number" class="val">--</div></div>
-        <div class="stat-card"><div id="usd-total" class="val" style="color:#fbbf24">--</div></div>
-
-        <div class="fyi-row">
+        <div class="fyi-box">
             Rate: 1 <span id="rate-away">LOC</span> = <span id="current-rate">--</span> <span id="rate-home">HOM</span>
         </div>
 
-        <div id="log-container" onclick="this.classList.toggle('open')">
-            <div id="latest-message" class="log-entry latest">System Ready...</div>
-            <div id="log-history"></div>
+        <div id="log-container">
+            <div id="latest-message" class="log-entry latest">Initializing...</div>
+            <div id="log-history" style="display:none"></div>
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
