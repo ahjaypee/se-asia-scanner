@@ -1,23 +1,29 @@
+// 1. Hook up the screen elements
 const video = document.getElementById('camera-stream');
 const captureBtn = document.getElementById('scanner-button');
+const localDisplay = document.getElementById('tip-advice');
+const usdDisplay = document.getElementById('usd-total');
 
+// 2. Simple Camera Start
 async function startCamera() {
     try {
-        // We are asking for the bare minimum here to force it to open
         const stream = await navigator.mediaDevices.getUserMedia({ 
             video: { facingMode: "environment" }, 
             audio: false 
         });
         video.srcObject = stream;
+        video.play();
     } catch (err) {
-        alert("Camera Error: " + err.name);
+        console.error("Camera Error: ", err);
     }
 }
 
-// Set up the button to alert us so we know the script is alive
+// 3. Simple Button Logic
 captureBtn.addEventListener('click', () => {
-    alert("Button pressed - logic is working!");
+    localDisplay.innerText = "Scanning...";
+    // For testing: If you see this alert, the brain is alive!
+    alert("Camera shutter triggered!");
 });
 
-// Start the camera
+// 4. Run!
 startCamera();
