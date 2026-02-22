@@ -98,14 +98,13 @@ async function runGeminiCheck(rawText, total, currency) {
         return;
     }
 
-    addLog("Gemini: Checking for hidden fees...");
+    addLog("Gemini: Analyzing line items...");
     
-    // Updated prompt for 2026 standards
     const promptText = `Analyze receipt: "${rawText}". Total: ${total} ${currency}. Brief math check? 1 short sentence.`;
 
     try {
-        // Change: Using 'gemini-1.5-flash-latest' to avoid version-specific 404s
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEYS.GEMINI_KEY}`;
+        // Updated to v1 (Stable) and gemini-1.5-flash
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`;
         
         const response = await fetch(url, {
             method: 'POST',
@@ -116,9 +115,8 @@ async function runGeminiCheck(rawText, total, currency) {
         const data = await response.json();
 
         if (data.error) {
-            // This will help us if it's still restricted
+            // This will show us if there is still a permissions issue
             addLog(`Google Logic: ${data.error.message}`);
-            console.error("Diagnostic:", data.error);
         } else if (data.candidates && data.candidates[0].content) {
             const advice = data.candidates[0].content.parts[0].text;
             document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:bold;">GEMINI:</span> ${advice}`;
