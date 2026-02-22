@@ -51,7 +51,7 @@ captureBtn.addEventListener('click', async () => {
 
 // 3. The Currency Logic
 async function convertCurrency(amount) {
-    // Add this safety check at the very top of the function
+    // 1. Safety check for the API key
     if (typeof API_KEYS === 'undefined') {
         document.getElementById('usd-total').innerText = "Config Loading...";
         return;
@@ -67,13 +67,38 @@ async function convertCurrency(amount) {
         
         if (data.result === "success") {
             const rate = data.conversion_rates.USD;
-            const usdAmount = (amount * rate).toFixed(2);
+            const usdAmount = parseFloat((amount * rate).toFixed(2)); // We need this as a number for comparison
+            
+            // Update the main USD display
             document.getElementById('usd-total').innerText = `$${usdAmount}`;
+
+            // --- START RIP-OFF LOGIC ---
+            const tipElement = document.getElementById('tip-advice');
+            let verdict = "";
+            let verdictColor = "#4ade80"; // Default to Green (Good)
+
+            if (currency === "VND" && usdAmount > 15) {
+                verdict = "⚠️ High for Vietnam!";
+                verdictColor = "#f87171"; // Red
+            } else if (currency === "SGD" && usdAmount > 25) {
+                verdict = "⚠️ Steep for Singapore!";
+                verdictColor = "#f87171"; // Red
+            } else if (currency === "THB" && usdAmount > 20) {
+                verdict = "⚠️ Tourist price alert!";
+                verdictColor = "#fbbf24"; // Yellow/Amber
+            } else {
+                verdict = "✅ Looks like a fair deal.";
+                verdictColor = "#4ade80"; // Green
+            }
+
+            tipElement.innerText = verdict;
+            tipElement.style.color = verdictColor;
+            // --- END RIP-OFF LOGIC ---
+
         } else {
             document.getElementById('usd-total').innerText = "Invalid Key";
         }
-   } catch (err) {
-        // This will display the actual error message on your phone screen
+    } catch (err) {
         document.getElementById('usd-total').innerText = "Err: " + err.message.substring(0, 10);
     }
 }
