@@ -3,30 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SE Asia Scanner</title>
+    <title>Travel Scanner</title>
     <style>
-       /* Fix 1: Give the camera a definite size so it isn't a black sliver */
-#camera-stream { 
-    width: 100%; 
-    height: 45vh; 
-    background: #111; 
-    object-fit: cover; 
-}
-
-/* Fix 2: Make the buttons big enough to touch */
-select, #scanner-button { 
-    display: block;
-    width: 100%; 
-    padding: 15px; 
-    margin: 10px 0; 
-    border-radius: 8px;
-    font-size: 16px; /* Prevents iPhone from auto-zooming */
-}
+        body { font-family: -apple-system, sans-serif; background: #0f172a; color: white; text-align: center; margin: 0; }
+        #camera-stream { width: 100%; height: 45vh; background: #000; object-fit: cover; border-bottom: 2px solid #38bdf8; }
+        .container { padding: 15px; }
+        
+        select, .btn { 
+            width: 100%; padding: 15px; margin: 8px 0; border-radius: 10px; 
+            font-size: 16px; border: none; font-weight: bold; 
+        }
+        
+        select { background: #1e293b; color: white; border: 1px solid #334155; }
+        #scanner-button { background: #38bdf8; color: #0f172a; }
+        #reset-button { background: #334155; color: #94a3b8; }
+        
+        .result-box { 
+            background: #1e293b; padding: 20px; border-radius: 15px; 
+            margin-top: 15px; border: 1px solid #334155; 
+        }
+        .label { color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 5px; }
+        #usd-total { color: #fbbf24; font-size: 2.5rem; font-weight: bold; display: block; }
     </style>
 </head>
 <body>
 
-    <video id="camera-stream" autoplay playsinline muted webkit-playsinline></video>
+    <video id="camera-stream" autoplay playsinline muted></video>
 
     <div class="container">
         <select id="country-selector">
@@ -35,22 +37,20 @@ select, #scanner-button {
             <option value="SGD">🇸🇬 Singapore (Dollar)</option>
         </select>
 
-        <button id="scanner-button">📸 SCAN RECEIPT</button>
+        <button id="scanner-button" class="btn">📸 SCAN RECEIPT</button>
+        <button id="reset-button" class="btn">RESET</button>
 
         <div class="result-box">
-            <div class="label">Local Total Found</div>
-            <div id="tip-advice" style="font-size: 1.2rem; margin: 10px 0;">--</div>
-            
+            <div class="label">Local Total</div>
+            <div id="tip-advice" style="font-size: 1.2rem;">--</div>
             <hr style="border: 0; border-top: 1px solid #334155; margin: 15px 0;">
-            
             <div class="label">Estimated USD</div>
             <span id="usd-total">--</span>
         </div>
     </div>
-	<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="config.js"></script>
-    
     <script src="app.js"></script>
 </body>
 </html>

@@ -82,3 +82,8 @@ async function convertCurrency(amount) {
 window.onload = () => {
     startCamera();
 };
+// Reset Button Logic
+document.getElementById('reset-button').addEventListener('click', () => {
+    document.getElementById('tip-advice').innerText = "--";
+    document.getElementById('usd-total').innerText = "--";
+});
