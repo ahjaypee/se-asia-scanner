@@ -5,13 +5,12 @@ const video = document.getElementById('camera-stream');
 // This part turns the camera ON as soon as the page loads
 async function startCamera() {
     const constraints = {
-        video: { 
-            facingMode: "environment",
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-        },
-        audio: false
-    };
+    video: { 
+        facingMode: "environment",
+        width: { ideal: 720 },
+        height: { ideal: 1280 }
+    }
+};
 
     try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);

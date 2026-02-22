@@ -2,53 +2,45 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SE Asia Scanner</title>
     <style>
-        body { font-family: sans-serif; background: #0f172a; color: white; text-align: center; margin: 0; }
-        #camera-stream { width: 100%; max-height: 300px; background: #333; }
+        body { font-family: -apple-system, sans-serif; background: #0f172a; color: white; text-align: center; margin: 0; overflow-x: hidden; }
+        /* Forces the camera to look like a portrait phone screen */
+        #camera-stream { width: 100%; height: 50vh; background: #000; object-fit: cover; }
         .container { padding: 20px; }
-        #scanner-button { 
-            background: #38bdf8; color: #0f172a; border: none; 
-            padding: 15px 30px; font-size: 1.2rem; font-weight: bold; 
-            border-radius: 10px; cursor: pointer; margin-top: 10px;
-        }
-        .result-box { 
-			background: #1e293b; 
-			margin: 20px auto; 
-			padding: 20px; 
-			border-radius: 15px; 
-			width: 85%;
-			box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-		}
+        select, button { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 10px; font-size: 1rem; border: none; }
+        select { background: #1e293b; color: white; border: 1px solid #38bdf8; }
+        #scanner-button { background: #38bdf8; color: #0f172a; font-weight: bold; cursor: pointer; }
+        .result-box { background: #1e293b; padding: 20px; border-radius: 15px; border: 1px solid #334155; }
+        .label { color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+        #usd-total { color: #fbbf24; font-size: 2.5rem; font-weight: bold; display: block; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-    <video id="camera-stream" autoplay playsinline muted webkit-playsinline 
-          style="width: 100%; height: 60vh; background: black; object-fit: cover;">
-    </video>
+    <video id="camera-stream" autoplay playsinline muted webkit-playsinline></video>
 
     <div class="container">
-    <select id="country-selector" style="padding: 10px; border-radius: 5px; margin-bottom: 10px; width: 80%; background: #1e293b; color: white; border: 1px solid #38bdf8;">
-        <option value="THB">🇹🇭 Thailand (Baht)</option>
-        <option value="VND">🇻🇳 Vietnam (Dong)</option>
-        <option value="SGD">🇸🇬 Singapore (Dollar)</option>
-    </select>
-    <br>
-    <button id="scanner-button">SCAN RECEIPT</button>
-    </div>
-	<div class="result-box">
-        <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 5px;">Scanned Total (Local):</p>
-        <p id="tip-advice" style="font-size: 1.5rem; font-weight: bold; margin: 0;">--</p>
-        
-        <hr style="border: 0; border-top: 1px solid #334155; margin: 15px 0;">
-        
-        <p style="font-size: 1rem; color: #fbbf24; margin-bottom: 5px;">Estimated USD:</p>
-        <p style="font-size: 2.2rem; font-weight: bold; color: #fbbf24; margin: 0;">
+        <select id="country-selector">
+            <option value="THB">🇹🇭 Thailand (Baht)</option>
+            <option value="VND">🇻🇳 Vietnam (Dong)</option>
+            <option value="SGD">🇸🇬 Singapore (Dollar)</option>
+        </select>
+
+        <button id="scanner-button">📸 SCAN RECEIPT</button>
+
+        <div class="result-box">
+            <div class="label">Local Total Found</div>
+            <div id="tip-advice" style="font-size: 1.2rem; margin: 10px 0;">--</div>
+            
+            <hr style="border: 0; border-top: 1px solid #334155; margin: 15px 0;">
+            
+            <div class="label">Estimated USD</div>
             <span id="usd-total">--</span>
-        </p>
+        </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>
