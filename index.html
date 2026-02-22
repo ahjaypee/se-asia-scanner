@@ -1,167 +1,82 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Travel Scanner Pro</title>
-    <style>
-        :root {
-            --bg: #020617;
-            --card-bg: #0f172a;
-            --accent: #38bdf8;
-            --border: #334155;
-            --text-dim: #94a3b8;
-        }
+<style>
+    /* Enlarged Portrait Camera */
+    #camera-stream { 
+        width: 100%; 
+        height: 50vh; /* Reverting to a larger portrait view */
+        background: #000; 
+        object-fit: cover; 
+        border-bottom: 1px solid var(--border); 
+    }
 
-        body { 
-            font-family: -apple-system, system-ui, sans-serif; 
-            background: var(--bg); 
-            color: white; 
-            margin: 0; 
-            padding: 10px;
-            display: flex;
-            justify-content: center;
-        }
+    /* Styled Selectors to minimize "White Pop" */
+    select { 
+        background: #1e293b; 
+        color: var(--accent); 
+        border: 1px solid var(--border);
+        padding: 10px;
+        border-radius: 8px;
+        font-weight: bold;
+        width: 100%;
+        font-size: 14px;
+        -webkit-appearance: none; /* Helps with custom styling on iOS/Android */
+    }
 
-        .app-frame { 
-            border: 1px solid var(--border); 
-            border-radius: 28px; 
-            overflow: hidden; 
-            background: var(--card-bg); 
-            max-width: 450px; 
-            width: 100%;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-        }
+    /* Event Log Styling */
+    #log-container {
+        grid-column: span 2;
+        background: #020617;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        max-height: 40px;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+    #log-container.open { max-height: 200px; overflow-y: auto; }
+    .log-entry { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px; text-align: left; }
+    .log-entry.latest { color: var(--accent); font-weight: bold; }
+</style>
 
-        #camera-stream { 
-            width: 100%; 
-            height: 30vh; 
-            background: #000; 
-            object-fit: cover; 
-            border-bottom: 1px solid var(--border); 
-        }
+<div class="app-frame">
+    <video id="camera-stream" autoplay playsinline muted></video>
 
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            padding: 20px;
-        }
+    <div class="dashboard-grid">
+        <div class="label" style="text-align: left;">Away Currency</div>
+        <div class="label" style="text-align: left;">Home Currency</div>
 
-        /* Custom Themed Selectors */
-        select { 
-            background: #1e293b; 
-            color: var(--accent); 
-            border: 1px solid var(--border);
-            padding: 12px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 14px;
-            width: 100%;
-            outline: none;
-        }
+        <select id="country-selector">
+            <option value="THB">🇹🇭 THB</option>
+            <option value="VND">🇻🇳 VND</option>
+            <option value="SGD">🇸🇬 SGD</option>
+            <option value="QAR">🇶🇦 QAR</option>
+            <option value="GBP">🇬🇧 GBP</option>
+            <option value="EUR">🇪🇺 EUR</option>
+            <option value="NZD">🇳🇿 NZD</option>
+            <option value="AUD">🇦🇺 AUD</option>
+        </select>
+        <select id="home-currency">
+            <option value="USD">🇺🇸 USD</option>
+            <option value="EUR">🇪🇺 EUR</option>
+            <option value="GBP">🇬🇧 GBP</option>
+        </select>
 
-        /* Buttons */
-        .btn { 
-            padding: 16px; 
-            border-radius: 12px; 
-            font-size: 13px; 
-            border: none; 
-            font-weight: 800; 
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: all 0.2s;
-        }
-        #reset-button { background: #334155; color: var(--text-dim); }
-        #scanner-button { background: var(--accent); color: var(--bg); }
-        
-        .disabled-btn { opacity: 0.2; pointer-events: none; grayscale: 1; }
+        <button id="reset-button" class="btn">RESET</button>
+        <button id="scanner-button" class="btn">📸 SCAN</button>
 
-        /* Data Cards */
-        .stat-card { 
-            background: #1e293b; 
-            padding: 15px; 
-            border-radius: 16px; 
-            border: 1px solid var(--border);
-        }
-        
-        .label { color: var(--text-dim); font-size: 0.65rem; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
-        .val { font-size: 1.5rem; font-weight: bold; }
-        #usd-total { color: #fbbf24; }
+        <div class="label" style="text-align: left;">Scanned Amt</div>
+        <div class="label" style="text-align: left;">Home Total</div>
 
-        /* Exchange Rate Info Box */
-        .fyi-row {
-            grid-column: span 2;
-            background: rgba(0,0,0,0.3);
-            padding: 10px;
-            border-radius: 10px;
-            font-size: 0.75rem;
-            color: var(--text-dim);
-            border: 1px solid var(--border);
-            text-align: center;
-        }
+        <div class="stat-card"><div id="scanned-number" class="val">--</div></div>
+        <div class="stat-card"><div id="usd-total" class="val" style="color:#fbbf24">--</div></div>
 
-        #tip-advice { 
-            grid-column: span 2;
-            background: #020617; 
-            padding: 15px; 
-            border-radius: 12px; 
-            font-size: 0.9rem;
-            border: 1px dashed var(--border);
-            color: var(--text-dim);
-        }
-    </style>
-</head>
-<body>
+        <div class="fyi-row">
+            Rate: 1 <span id="rate-away">LOC</span> = <span id="current-rate">--</span> <span id="rate-home">HOM</span>
+        </div>
 
-    <div class="app-frame">
-        <video id="camera-stream" autoplay playsinline muted></video>
-
-        <div class="dashboard-grid">
-            <div>
-                <div class="label">Away (Local)</div>
-                <select id="country-selector">
-                    <option value="THB">🇹🇭 THB</option>
-                    <option value="VND">🇻🇳 VND</option>
-                    <option value="SGD">🇸🇬 SGD</option>
-                    <option value="QAR">🇶🇦 QAR</option>
-                    <option value="GBP">🇬🇧 GBP</option>
-                    <option value="EUR">🇪🇺 EUR</option>
-                    <option value="NZD">🇳🇿 NZD</option>
-                    <option value="AUD">🇦🇺 AUD</option>
-                </select>
-            </div>
-            <div>
-                <div class="label">Home</div>
-                <select id="home-currency">
-                    <option value="USD">🇺🇸 USD</option>
-                    <option value="EUR">🇪🇺 EUR</option>
-                    <option value="GBP">🇬🇧 GBP</option>
-                </select>
-            </div>
-
-            <button id="reset-button" class="btn">Reset</button>
-            <button id="scanner-button" class="btn">📸 Scan</button>
-
-            <div class="stat-card">
-                <div class="label">Local Price</div>
-                <div id="scanned-number" class="val">--</div>
-            </div>
-            <div class="stat-card">
-                <div id="home-label" class="label">Home Total</div>
-                <div id="usd-total" class="val">--</div>
-            </div>
-
-            <div class="fyi-row" id="rate-display-box">
-                Rate: 1 <span id="rate-away">LOC</span> = <span id="current-rate">--</span> <span id="rate-home">HOM</span>
-            </div>
-
-            <div id="tip-advice">Ready to scan...</div>
+        <div id="log-container" onclick="this.classList.toggle('open')">
+            <div id="latest-message" class="log-entry latest">System Ready...</div>
+            <div id="log-history"></div>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="config.js"></script>
-    <script src="app.js"></script>
-</body>
-</html>
+</div>
