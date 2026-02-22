@@ -21,7 +21,6 @@ async function startCamera() {
 captureBtn.addEventListener('click', async () => {
     localDisplay.innerText = "Processing Image...";
     
-    // Create a virtual canvas to capture the frame
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -30,17 +29,16 @@ captureBtn.addEventListener('click', async () => {
     if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Use Tesseract to read the "photo"
         Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
             console.log("Read text:", text);
             
-            // Look for prices (numbers with decimals)
             const priceRegex = /\d+[.,]\d{2}/g;
             const matches = text.match(priceRegex);
 
             if (matches) {
                 const total = Math.max(...matches.map(m => parseFloat(m.replace(',', '.'))));
-                localDisplay.innerText = `Found: ${total}`;
+                document.getElementById('scanned-number').innerText = total;
+                document.getElementById('tip-advice').innerText = "Calculating USD...";
                 convertCurrency(total);
             } else {
                 localDisplay.innerText = "Price not found. Try again!";
@@ -51,7 +49,6 @@ captureBtn.addEventListener('click', async () => {
 
 // 3. The Currency Logic
 async function convertCurrency(amount) {
-    // 1. Safety check for the API key
     if (typeof API_KEYS === 'undefined') {
         document.getElementById('usd-total').innerText = "Config Loading...";
         return;
@@ -67,33 +64,30 @@ async function convertCurrency(amount) {
         
         if (data.result === "success") {
             const rate = data.conversion_rates.USD;
-            const usdAmount = parseFloat((amount * rate).toFixed(2)); // We need this as a number for comparison
+            const usdAmount = parseFloat((amount * rate).toFixed(2));
             
-            // Update the main USD display
             document.getElementById('usd-total').innerText = `$${usdAmount}`;
 
-            // --- START RIP-OFF LOGIC ---
             const tipElement = document.getElementById('tip-advice');
             let verdict = "";
-            let verdictColor = "#4ade80"; // Default to Green (Good)
+            let verdictColor = "#4ade80"; 
 
             if (currency === "VND" && usdAmount > 15) {
                 verdict = "⚠️ High for Vietnam!";
-                verdictColor = "#f87171"; // Red
+                verdictColor = "#f87171"; 
             } else if (currency === "SGD" && usdAmount > 25) {
                 verdict = "⚠️ Steep for Singapore!";
-                verdictColor = "#f87171"; // Red
+                verdictColor = "#f87171"; 
             } else if (currency === "THB" && usdAmount > 20) {
                 verdict = "⚠️ Tourist price alert!";
-                verdictColor = "#fbbf24"; // Yellow/Amber
+                verdictColor = "#fbbf24"; 
             } else {
                 verdict = "✅ Looks like a fair deal.";
-                verdictColor = "#4ade80"; // Green
+                verdictColor = "#4ade80"; 
             }
 
             tipElement.innerText = verdict;
             tipElement.style.color = verdictColor;
-            // --- END RIP-OFF LOGIC ---
 
         } else {
             document.getElementById('usd-total').innerText = "Invalid Key";
@@ -103,12 +97,16 @@ async function convertCurrency(amount) {
     }
 }
 
-// This ensures the page is fully loaded before we turn the camera on
+// 4. Reset Button Logic (Clean Version)
+document.getElementById('reset-button').addEventListener('click', () => {
+    document.getElementById('scanned-number').innerText = "--";
+    const tipElement = document.getElementById('tip-advice');
+    tipElement.innerText = "Ready to scan...";
+    tipElement.style.color = "#94a3b8"; 
+    document.getElementById('usd-total').innerText = "--";
+});
+
+// 5. Start Up
 window.onload = () => {
     startCamera();
 };
-// Reset Button Logic
-document.getElementById('reset-button').addEventListener('click', () => {
-    document.getElementById('tip-advice').innerText = "--";
-    document.getElementById('usd-total').innerText = "--";
-});
