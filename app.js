@@ -6,7 +6,8 @@ let streamTrack = null;
 
 window.onload = () => {
     startCamera();
-    initGPS(); // Try to set Away currency based on location
+    initGPS();
+    checkCurrencyMatch();
 };
 
 async function startCamera() {
@@ -17,30 +18,27 @@ async function startCamera() {
         video.srcObject = stream;
         streamTrack = stream.getVideoTracks()[0];
         video.onloadedmetadata = () => video.play();
+        video.style.display = "block";
         addLog("Camera Ready");
     } catch (err) { addLog("Camera Access Denied"); }
 }
 
-// 1. GPS Auto-Set Logic
 function initGPS() {
     if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
-            
-            // Basic logic: If in the US, set Away to USD. 
-            // This is a placeholder for a real Geocoding API.
-            if (lat > 24 && lat < 49 && lon > -125 && lon < -66) {
+            // Maryland/Eastern Shore detection logic
+            if (lat > 37 && lat < 40 && lon > -77 && lon < -75) {
                 awaySelect.value = "USD";
-                addLog("Location: USA. Set to USD.");
+                addLog("Location: Maryland. Set to USD.");
             } else {
-                addLog("Abroad? Please select Local Currency.");
+                addLog("Abroad? Select local currency.");
             }
         });
     }
 }
 
-// 2. The "Long Exposure" Shutter (1-Second Delay)
 captureBtn.addEventListener('click', async () => {
     if (navigator.vibrate) navigator.vibrate(50);
     addLog("Lighting & Focusing (1s)...");
@@ -49,7 +47,6 @@ captureBtn.addEventListener('click', async () => {
         await streamTrack.applyConstraints({ advanced: [{ torch: true }] });
     }
 
-    // Increased to 1000ms for better focus/exposure
     setTimeout(async () => {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
@@ -62,38 +59,43 @@ captureBtn.addEventListener('click', async () => {
             streamTrack.stop();
             video.style.display = "none";
         }
-        addLog("Photo Captured. Analyzing...");
+        addLog("Analyzing Receipt...");
         processOCR(canvas);
     }, 1000); 
 });
 
-// 3. OCR & AI Call
 async function processOCR(canvas) {
     const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+    
+    // THE "$ TO 5" FIX: 
+    // We look for numbers, but specifically clean up common OCR mistakes 
+    // where a leading '$' is read as a '5'.
+    const cleanedText = text.replace(/[$S5](\d+\.\d{2})/g, '$1'); 
     const priceRegex = /\d+[.,]\d{2}/g;
-    const matches = text.match(priceRegex);
+    const matches = cleanedText.match(priceRegex);
 
     if (matches) {
-        const total = Math.max(...matches.map(m => parseFloat(m.replace(',', '.'))));
-        document.getElementById('scanned-number').innerText = `${total} ${awaySelect.value}`;
+        // Convert to float and pick the highest value
+        const prices = matches.map(m => parseFloat(m.replace(',', '.')));
+        const total = Math.max(...prices);
         
-        // Run Currency Conversion
+        document.getElementById('scanned-number').innerText = `${total} ${awaySelect.value}`;
         const converted = await convertCurrency(total);
         
-        // TRIGGER GEMINI AI SANITY CHECK
+        // Final Step: Ask Gemini to explain the receipt
         runGeminiCheck(text, total, awaySelect.value);
     } else {
-        addLog("OCR Failed. Tap Reset.");
+        addLog("No price found. Try a closer shot!");
     }
 }
 
 async function runGeminiCheck(rawText, total, currency) {
-    addLog("Gemini: Checking for hidden fees...");
+    addLog("Gemini: Analyzing line items...");
     
-    const prompt = `You are a travel finance expert. Analyze this receipt text: "${rawText}". 
-    The total found is ${total} ${currency}. 
-    Does this look correct? Mention if taxes/service charges are included. 
-    Keep it very brief (2 sentences max).`;
+    // We strictly define the prompt to prevent Gemini from hallucinating
+    const prompt = `Analyze this receipt text: "${rawText}". 
+    The total is ${total} ${currency}. 
+    Tell me in one short sentence: Does the math add up and are there hidden fees?`;
 
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`, {
@@ -103,32 +105,53 @@ async function runGeminiCheck(rawText, total, currency) {
                 contents: [{ parts: [{ text: prompt }] }]
             })
         });
-        const data = await response.json();
-        const advice = data.candidates[0].content.parts[0].text;
         
-        // Display result in the log area
-        document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24">Gemini:</span> ${advice}`;
+        const data = await response.json();
+        
+        if (data.candidates && data.candidates[0]) {
+            const advice = data.candidates[0].content.parts[0].text;
+            document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:bold;">GEMINI:</span> ${advice}`;
+        } else {
+            throw new Error("Empty AI response");
+        }
     } catch (err) {
-        addLog("Gemini Check Unavailable.");
+        console.error(err);
+        addLog("AI Check failed. Check API key in config.");
     }
 }
-
-// ... (Rest of your convertCurrency and Reset functions remain the same) ...
 
 async function convertCurrency(amount) {
     const away = awaySelect.value;
     const home = homeSelect.value;
-    const url = `https://v6.exchangerate-api.com/v6/${API_KEYS.CURRENCY_KEY}/latest/${away}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    if (data.result === "success") {
-        const rate = data.conversion_rates[home];
-        const result = (amount * rate).toFixed(2);
-        document.getElementById('usd-total').innerText = `${result} ${home}`;
-        document.getElementById('current-rate').innerText = rate.toFixed(2);
-        return result;
-    }
+    try {
+        const url = `https://v6.exchangerate-api.com/v6/${API_KEYS.CURRENCY_KEY}/latest/${away}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.result === "success") {
+            const rate = data.conversion_rates[home];
+            const result = (amount * rate).toFixed(2);
+            
+            document.getElementById('usd-total').innerText = `${result} ${home}`;
+            
+            // UPDATE THE FYI ROW LABELS
+            document.getElementById('current-rate').innerText = rate.toFixed(4);
+            document.getElementById('rate-away').innerText = away;
+            document.getElementById('rate-home').innerText = home;
+
+            return result;
+        }
+    } catch (err) { addLog("Rate API Error"); }
 }
 
-document.getElementById('reset-button').addEventListener('click', () => { location.reload(); });
-function addLog(msg) { document.getElementById('latest-message').innerText = msg; }
+document.getElementById('reset-button').addEventListener('click', () => {
+    location.reload(); 
+});
+
+function addLog(msg) {
+    document.getElementById('latest-message').innerText = msg;
+}
+
+function checkCurrencyMatch() {
+    captureBtn.classList.toggle('disabled-btn', awaySelect.value === homeSelect.value);
+}
