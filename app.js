@@ -91,7 +91,7 @@ async function processOCR(canvas) {
         addLog("No price found. Tap RETAKE to try again.");
     }
 }
-
+//force a change?
 async function runGeminiCheck(rawText, total, currency) {
     if (!API_KEYS.GEMINI_KEY) {
         addLog("AI Error: Check config.js for GEMINI_KEY");
