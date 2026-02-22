@@ -3,6 +3,7 @@ const captureBtn = document.getElementById('scanner-button');
 const awaySelect = document.getElementById('country-selector');
 const homeSelect = document.getElementById('home-currency');
 let eventLog = [];
+let streamTrack = null;
 
 window.onload = () => {
     startCamera();
@@ -16,55 +17,59 @@ async function startCamera() {
             video: { facingMode: "environment" }, audio: false 
         });
         video.srcObject = stream;
-        // The play() call is crucial after setting srcObject
+        streamTrack = stream.getVideoTracks()[0];
+        
         video.onloadedmetadata = () => video.play();
+        video.style.display = "block"; // Ensure video is visible
         addLog("Camera Live");
     } catch (err) {
         addLog("Camera Access Denied");
-        console.error(err);
     }
 }
 
-function addLog(msg) {
-    document.getElementById('latest-message').innerText = msg;
-    const now = new Date().toLocaleTimeString();
-    eventLog.unshift(`[${now}] ${msg}`);
-    if (eventLog.length > 5) eventLog.pop();
-}
-
-function checkCurrencyMatch() {
-    const isSame = awaySelect.value === homeSelect.value;
-    captureBtn.classList.toggle('disabled-btn', isSame);
-    addLog(isSame ? "Set different currencies" : `Ready: ${awaySelect.value} to ${homeSelect.value}`);
-}
-
-awaySelect.addEventListener('change', checkCurrencyMatch);
-homeSelect.addEventListener('change', checkCurrencyMatch);
-
+// 4. THE SHUTTER (With Torch and Auto-Off)
 captureBtn.addEventListener('click', async () => {
     if (navigator.vibrate) navigator.vibrate(50);
     addLog("Capturing...");
 
-    // Capture Image
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    addLog("Analyzing Text...");
-    Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
-        const priceRegex = /\d+[.,]\d{2}/g;
-        const matches = text.match(priceRegex);
+    // Try to pulse the Torch
+    if (streamTrack && streamTrack.getCapabilities().torch) {
+        try {
+            await streamTrack.applyConstraints({ advanced: [{ torch: true }] });
+        } catch (e) { console.log("Torch failed"); }
+    }
 
-        if (matches) {
-            const total = Math.max(...matches.map(m => parseFloat(m.replace(',', '.'))));
-            document.getElementById('scanned-number').innerText = total;
-            convertCurrency(total);
-        } else {
-            addLog("No Price Found");
+    // Short delay for exposure adjustment
+    setTimeout(async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // TURN OFF TORCH AND CAMERA
+        if (streamTrack) {
+            try {
+                await streamTrack.applyConstraints({ advanced: [{ torch: false }] });
+                streamTrack.stop(); // This kills the camera hardware
+                video.style.display = "none"; // Hide the black video box
+                addLog("Camera Off - Processing");
+            } catch (e) { }
         }
-    });
+
+        Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
+            const priceRegex = /\d+[.,]\d{2}/g;
+            const matches = text.match(priceRegex);
+
+            if (matches) {
+                const total = Math.max(...matches.map(m => parseFloat(m.replace(',', '.'))));
+                document.getElementById('scanned-number').innerText = total;
+                convertCurrency(total);
+            } else {
+                addLog("No Price Found - Reset to try again");
+            }
+        });
+    }, 300);
 });
 
 async function convertCurrency(amount) {
@@ -81,7 +86,7 @@ async function convertCurrency(amount) {
             document.getElementById('current-rate').innerText = rate.toFixed(2);
             document.getElementById('rate-away').innerText = away;
             document.getElementById('rate-home').innerText = home;
-            addLog("Conversion Success");
+            addLog("Success! Press Reset for next scan.");
         }
     } catch (err) { addLog("API Error"); }
 }
@@ -89,5 +94,18 @@ async function convertCurrency(amount) {
 document.getElementById('reset-button').addEventListener('click', () => {
     document.getElementById('scanned-number').innerText = "--";
     document.getElementById('usd-total').innerText = "--";
-    addLog("Reset Complete");
+    startCamera(); // Re-start the camera for the next scan
+    addLog("System Reset - Camera On");
 });
+
+function addLog(msg) {
+    document.getElementById('latest-message').innerText = msg;
+    const now = new Date().toLocaleTimeString();
+    eventLog.unshift(`[${now}] ${msg}`);
+    if (eventLog.length > 5) eventLog.pop();
+}
+
+function checkCurrencyMatch() {
+    const isSame = awaySelect.value === homeSelect.value;
+    captureBtn.classList.toggle('disabled-btn', isSame);
+}
