@@ -4,15 +4,25 @@ const video = document.getElementById('camera-stream');
 
 // This part turns the camera ON as soon as the page loads
 async function startCamera() {
+    const constraints = {
+        video: { 
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        },
+        audio: false
+    };
+
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" }, // Uses the back camera
-            audio: false 
-        });
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
+        // This line forces the video to play if it's stuck
+        video.onloadedmetadata = () => {
+            video.play();
+        };
     } catch (err) {
-        console.error("Camera error: ", err);
-        alert("Camera blocked. Please allow camera access in your browser settings.");
+        console.error("Camera error:", err);
+        alert("Camera issue: " + err.name);
     }
 }
 captureBtn.addEventListener('click', async () => {
@@ -37,4 +47,5 @@ captureBtn.addEventListener('click', async () => {
 });
 
 // Move this to the very last line
-startCamera();
+// Wait 1 second for the page to settle before turning on the lens
+setTimeout(startCamera, 1000);
