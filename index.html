@@ -18,13 +18,15 @@
 </head>
 <body>
 
-    <video id="camera-stream" autoplay playsinline muted style="width: 100%; height: 350px; background: black; object-fit: contain;"></video>
+    <video id="camera-stream" autoplay playsinline muted webkit-playsinline 
+          style="width: 100%; height: 60vh; background: black; object-fit: cover;">
+    </video>
 
     <div class="container">
         <button id="scanner-button">SCAN RECEIPT</button>
 
         <div class="result-box">
-            <p>USD Total: <span id="usd-total">--</span></p>
+            <p style="font-size: 2rem; color: #fbbf24;">USD Total: <span id="usd-total">--</span></p>
             <p id="tip-advice">Ready to scan...</p>
         </div>
     </div>
