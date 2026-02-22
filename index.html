@@ -13,7 +13,14 @@
             padding: 15px 30px; font-size: 1.2rem; font-weight: bold; 
             border-radius: 10px; cursor: pointer; margin-top: 10px;
         }
-        .result-box { background: #1e293b; margin: 15px; padding: 15px; border-radius: 10px; }
+        .result-box { 
+			background: #1e293b; 
+			margin: 20px auto; 
+			padding: 20px; 
+			border-radius: 15px; 
+			width: 85%;
+			box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+		}
     </style>
 </head>
 <body>
@@ -31,7 +38,17 @@
     <br>
     <button id="scanner-button">SCAN RECEIPT</button>
     </div>
-
+	<div class="result-box">
+        <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 5px;">Scanned Total (Local):</p>
+        <p id="tip-advice" style="font-size: 1.5rem; font-weight: bold; margin: 0;">--</p>
+        
+        <hr style="border: 0; border-top: 1px solid #334155; margin: 15px 0;">
+        
+        <p style="font-size: 1rem; color: #fbbf24; margin-bottom: 5px;">Estimated USD:</p>
+        <p style="font-size: 2.2rem; font-weight: bold; color: #fbbf24; margin: 0;">
+            <span id="usd-total">--</span>
+        </p>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>

@@ -40,49 +40,33 @@ captureBtn.addEventListener('click', async () => {
 
     // 4. Send the photo to Tesseract (the OCR brain)
     Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
-        console.log("Raw Text:", text);
-        
-        // 1. Remove commas used as thousands separators (e.g., 1,200.00 -> 1200.00)
-        // This is common in Thailand and Singapore
-        let cleanedText = text.replace(/,(?=\d{3})/g, '');
-        
-        // 2. Find anything that looks like a decimal number
-        const priceRegex = /\d+\.\d{2}/g; 
-        const prices = cleanedText.match(priceRegex);
+    // 1. Log the raw text so you can see it in the 'tip-advice' box for debugging
+    console.log("Raw Scan:", text);
+    
+    // 2. Clean the text: remove common OCR errors (like turning '5' into 'S')
+    let cleanedText = text.replace(/S/g, '5').replace(/I/g, '1').replace(/O/g, '0');
 
-        if (prices) {
-            // 3. Convert to numbers and find the max
-            const numericPrices = prices.map(p => parseFloat(p));
-            const total = Math.max(...numericPrices);
-            
-            document.getElementById('tip-advice').innerText = `Found Total: ${total}`;
-            convertCurrency(total);
-        } else {
-            // If no decimals found, look for whole numbers as a backup
-           Tesseract.recognize(canvas, 'eng').then(({ data: { text } }) => {
-        console.log("Raw Text:", text);
-        
-        // 1. Remove commas used as thousands separators (e.g., 1,200.00 -> 1200.00)
-        // This is common in Thailand and Singapore
-        let cleanedText = text.replace(/,(?=\d{3})/g, '');
-        
-        // 2. Find anything that looks like a decimal number
-        const priceRegex = /\d+\.\d{2}/g; 
-        const prices = cleanedText.match(priceRegex);
+    // 3. New Regex: Look for numbers with 2 decimal places (e.g. 10.50) 
+    // or large numbers without decimals (common for Vietnam)
+    const priceRegex = /\d+[\.,]\d{2}|\d{4,}/g; 
+    const matches = cleanedText.match(priceRegex);
 
-        if (prices) {
-            // 3. Convert to numbers and find the max
-            const numericPrices = prices.map(p => parseFloat(p));
-            const total = Math.max(...numericPrices);
-            
-            document.getElementById('tip-advice').innerText = `Found Total: ${total}`;
-            convertCurrency(total);
-        } else {
-            // If no decimals found, look for whole numbers as a backup
-            document.getElementById('tip-advice').innerText = "Saw: " + text.substring(0, 30)
-            console.log("No prices found in: " + text);
-        }
-    });
+    if (matches) {
+        // Convert matches to clean numbers
+        const numericPrices = matches.map(m => {
+            return parseFloat(m.replace(',', '.')); 
+        });
+
+        // Pick the highest number (usually the total)
+        const total = Math.max(...numericPrices);
+        
+        document.getElementById('tip-advice').innerText = `Scanned Total: ${total}`;
+        convertCurrency(total);
+    } else {
+        // If we can't find a price, show the first bit of text so we know what it DID see
+        document.getElementById('tip-advice').innerText = "Unclear scan. Saw: " + text.substring(0, 15);
+    }
+});
             console.log("No prices found in: " + text);
         }
     });
