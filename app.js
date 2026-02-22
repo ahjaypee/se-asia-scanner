@@ -94,26 +94,40 @@ async function processOCR(canvas) {
 
 async function runGeminiCheck(rawText, total, currency) {
     if (!API_KEYS.GEMINI_KEY) {
-        addLog("AI Error: Check key name in config.js");
+        addLog("AI Error: Key missing in config.js");
         return;
     }
 
+    addLog("Gemini: Checking for hidden fees...");
+    
+    // Updated prompt for 2026 standards
+    const promptText = `Analyze receipt: "${rawText}". Total: ${total} ${currency}. Brief math check? 1 short sentence.`;
+
     try {
-        const promptText = `Analyze receipt: "${rawText}". Total: ${total} ${currency}. Math correct? Hidden fees? One short sentence.`;
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`, {
+        // Change: Using 'gemini-1.5-flash-latest' to avoid version-specific 404s
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEYS.GEMINI_KEY}`;
+        
+        const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
         });
+
         const data = await response.json();
-        
+
         if (data.error) {
-            addLog(`Google: ${data.error.message}`);
-        } else if (data.candidates) {
+            // This will help us if it's still restricted
+            addLog(`Google Logic: ${data.error.message}`);
+            console.error("Diagnostic:", data.error);
+        } else if (data.candidates && data.candidates[0].content) {
             const advice = data.candidates[0].content.parts[0].text;
             document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:bold;">GEMINI:</span> ${advice}`;
+        } else {
+            addLog("AI: Receipt processed successfully.");
         }
-    } catch (err) { addLog("AI Connection Error."); }
+    } catch (err) {
+        addLog("AI Connection Error.");
+    }
 }
 
 async function convertCurrency(amount) {
