@@ -93,19 +93,23 @@ captureBtn.addEventListener('click', async () => {
 setTimeout(startCamera, 1000);
 
 async function convertCurrency(amount) {
-    const apiKey = 'b5af70e98175c3764fda6084'; // Use your real key from config.js
-    const countryCurrency = "THB"; // We'll start with Thailand as a test
+    const apiKey = CONFIG.API_KEY;
+    
+    // This line grabs the currency code (THB, VND, or SGD) from your dropdown
+    const countryCurrency = document.getElementById('country-selector').value; 
     
     try {
         const response = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/${countryCurrency}`);
         const data = await response.json();
-        const rate = data.conversion_rates.USD;
-        const usdAmount = (amount * rate).toFixed(2);
         
-        document.getElementById('usd-total').innerText = `$${usdAmount}`;
-        document.getElementById('tip-advice').innerText = `Success! ${amount} ${countryCurrency} is $${usdAmount} USD.`;
+        if (data.result === "success") {
+            const rate = data.conversion_rates.USD;
+            const usdAmount = (amount * rate).toFixed(2);
+            
+            document.getElementById('usd-total').innerText = `$${usdAmount}`;
+            document.getElementById('tip-advice').innerText = `Rate: 1 ${countryCurrency} = $${rate.toFixed(6)}`;
+        }
     } catch (err) {
-        document.getElementById('usd-total').innerText = "Error";
-        console.error(err);
+        console.error("API Error:", err);
     }
 }

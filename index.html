@@ -23,12 +23,13 @@
     </video>
 
     <div class="container">
-        <button id="scanner-button">SCAN RECEIPT</button>
-
-        <div class="result-box">
-            <p style="font-size: 2rem; color: #fbbf24;">USD Total: <span id="usd-total">--</span></p>
-            <p id="tip-advice">Ready to scan...</p>
-        </div>
+    <select id="country-selector" style="padding: 10px; border-radius: 5px; margin-bottom: 10px; width: 80%; background: #1e293b; color: white; border: 1px solid #38bdf8;">
+        <option value="THB">🇹🇭 Thailand (Baht)</option>
+        <option value="VND">🇻🇳 Vietnam (Dong)</option>
+        <option value="SGD">🇸🇬 Singapore (Dollar)</option>
+    </select>
+    <br>
+    <button id="scanner-button">SCAN RECEIPT</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
