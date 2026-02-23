@@ -41,17 +41,25 @@ function initGPS() {
     }
 }
 
+const torchBtn = document.getElementById('torch-button');
+let isTorchOn = false;
+
+// Manual Torch Toggle
+torchBtn.addEventListener('click', async () => {
+    if (streamTrack && streamTrack.getCapabilities().torch) {
+        isTorchOn = !isTorchOn;
+        try {
+            await streamTrack.applyConstraints({ advanced: [{ torch: isTorchOn }] });
+            torchBtn.style.background = isTorchOn ? '#fbbf24' : '#475569'; // Turns gold when on
+        } catch (e) { console.log("Torch constraint error", e); }
+    } else {
+        addLog("Flashlight not supported on this device.");
+    }
+});
+
 captureBtn.addEventListener('click', async () => {
     if (navigator.vibrate) navigator.vibrate(50);
-    addLog("Lighting & Focusing...");
-
-    if (streamTrack && streamTrack.getCapabilities().torch) {
-        try {
-            await streamTrack.applyConstraints({ 
-                advanced: [{ torch: true, fillLightMode: "flash" }] 
-            });
-        } catch (e) { console.log("Torch constraint not met"); }
-    }
+    addLog("Snapping photo...");
 
     setTimeout(async () => {
         const canvas = document.createElement('canvas');
@@ -60,20 +68,22 @@ captureBtn.addEventListener('click', async () => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
+        // Auto-turn off the torch after scanning if the user left it on
         if (streamTrack) {
             try {
+                isTorchOn = false;
+                torchBtn.style.background = '#475569';
                 await streamTrack.applyConstraints({ advanced: [{ torch: false }] });
             } catch(e){}
             streamTrack.stop();
             video.style.display = "none";
         }
         
-        // Convert canvas directly to Base64 for Gemini
         const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
-        addLog("Analyzing Receipt...");
+        addLog("Auditing Receipt...");
         analyzeReceipt(base64Image);
         
-    }, 1000); 
+    }, 500); 
 });
 
 async function analyzeReceipt(base64Image) {
@@ -82,9 +92,10 @@ async function analyzeReceipt(base64Image) {
         return;
     }
 
+    // The upgraded AI Prompt with Persona and Rip-Off detection
     const promptText = `Analyze this receipt. Return ONLY a JSON object with two keys:
     1. 'total': the final total amount to pay (as a number).
-    2. 'advice': A very short 1-sentence observation about the receipt (e.g., 'Looks like a coffee shop.' or 'Includes 10% tax.').`;
+    2. 'advice': Act as a witty, slightly sarcastic travel auditor. First, evaluate if the prices seem fair or if it looks like a 'tourist rip-off'. Second, make a humorous, tongue-in-cheek observation about the items bought—feel free to comment on excessive beer consumption, jokingly ask if Kate approved the expense, or suggest the money would have been better spent on gear for the Nikon Z8. Keep the response to 2 or 3 short, punchy sentences.`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`;
 
@@ -111,12 +122,9 @@ async function analyzeReceipt(base64Image) {
         const rawText = data.candidates[0].content.parts[0].text;
         const result = JSON.parse(rawText);
 
-        // Populate the manual input field so the user can edit it if needed
         scannedInput.value = result.total;
+        document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:bold;">AUDITOR:</span> ${result.advice}`;
         
-        document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:bold;">GEMINI:</span> ${result.advice}`;
-        
-        // Trigger the currency conversion automatically
         convertCurrency(result.total);
 
     } catch (err) {
@@ -133,7 +141,6 @@ async function convertCurrency(amount) {
     if (!amount || isNaN(amount)) return;
 
     try {
-        // Updated to a reliable, free exchange rate API supporting all listed currencies
         const url = `https://open.er-api.com/v6/latest/${away}`;
         const response = await fetch(url);
         const data = await response.json();
