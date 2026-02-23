@@ -3,8 +3,9 @@ const captureBtn = document.getElementById('scanner-button');
 const awaySelect = document.getElementById('country-selector');
 const homeSelect = document.getElementById('home-currency');
 const scannedInput = document.getElementById('scanned-input');
+const scanModeSelect = document.getElementById('scan-mode');
 let streamTrack = null;
-let isCameraActive = false; // Tracks whether to scan or restart
+let isCameraActive = false;
 
 window.onload = () => {
     startCamera();
@@ -60,17 +61,15 @@ torchBtn.addEventListener('click', async () => {
     }
 });
 
-// The smart single-button workflow
 captureBtn.addEventListener('click', async () => {
     if (!isCameraActive) {
-        // If camera is off, this acts as the "RETAKE" button
         addLog("Camera Restarting...");
         startCamera();
         return;
     }
 
     if (navigator.vibrate) navigator.vibrate(50);
-    addLog("Snapping photo...");
+    addLog("Analyzing visual data...");
 
     setTimeout(async () => {
         const canvas = document.createElement('canvas');
@@ -90,24 +89,37 @@ captureBtn.addEventListener('click', async () => {
         }
         
         isCameraActive = false;
-        captureBtn.innerText = "SCAN AGAIN"; // Changes button state
+        captureBtn.innerText = "SCAN AGAIN"; 
         const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
         
-        addLog("Analyzing Receipt...");
-        analyzeReceipt(base64Image);
+        analyzeImage(base64Image);
         
     }, 500); 
 });
 
-async function analyzeReceipt(base64Image) {
+async function analyzeImage(base64Image) {
     if (!API_KEYS.GEMINI_KEY) {
         addLog("AI Error: Check config.js for GEMINI_KEY");
         return;
     }
 
-    const promptText = `Analyze this receipt. Return ONLY a JSON object with two keys:
-    1. 'total': the final total amount to pay (as a number).
-    2. 'advice': Act as a friendly, observant travel companion. First, gently note if the prices seem reasonable for the region. Second, make a warm, personalized observation about the items bought—perhaps a positive note about trying the local cuisine, picking up something nice for Kate, or fueling up for a day of nature photography. Keep the response to 2 or 3 short, helpful sentences.`;
+    const mode = scanModeSelect.value;
+    let promptText = "";
+
+    // Dynamic AI Personas based on the selected mode
+    if (mode === "receipt") {
+        promptText = `Analyze this receipt. Return ONLY a JSON object with two keys:
+        1. 'total': the final total amount to pay (as a number).
+        2. 'advice': Act as a friendly travel companion. Gently note if prices seem reasonable, and make a warm personalized observation about the items bought (perhaps mentioning picking something up for Kate, or fueling up for photography). Keep to 2-3 short, helpful sentences.`;
+    } else if (mode === "menu") {
+        promptText = `Analyze this menu. Return ONLY a JSON object with two keys:
+        1. 'total': return 0.
+        2. 'advice': Act as a knowledgeable local food guide. Identify 1 or 2 standout regional specialties. Keep the user's love of cooking and their wife Kate in mind—maybe suggest a dish she might like or something inspiring to cook later. Comment briefly on whether prices look like standard local rates. Keep to 2-3 short, engaging sentences.`;
+    } else if (mode === "food") {
+        promptText = `Analyze this photo of food. Return ONLY a JSON object with two keys:
+        1. 'total': return 0.
+        2. 'advice': Act as an enthusiastic culinary expert. Identify the dish and its key ingredients. Since the user shoots with a Nikon Z8, maybe compliment the plating or suggest a photography angle, and add a fun fact about the dish's origin. Keep to 2-3 short, mouth-watering sentences.`;
+    }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`;
 
@@ -134,15 +146,20 @@ async function analyzeReceipt(base64Image) {
         const rawText = data.candidates[0].content.parts[0].text;
         const result = JSON.parse(rawText);
 
-        scannedInput.value = result.total;
-        document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:bold;">GEMINI:</span> ${result.advice}`;
+        // If it's a menu or food, the total will be 0. We leave the boxes blank.
+        if (result.total > 0) {
+            scannedInput.value = result.total;
+            convertCurrency(result.total);
+        } else {
+            scannedInput.value = "";
+            document.getElementById('usd-total').innerText = "--";
+        }
         
-        convertCurrency(result.total);
+        document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:normal;">${result.advice}</span>`;
 
     } catch (err) {
         console.error("Extraction Error:", err);
-        // Updated fallback message with clear instructions
-        document.getElementById('latest-message').innerHTML = `<span style="color:#f87171; font-weight:bold;">SYSTEM:</span> Scan failed. Please type the amount manually or tap SCAN AGAIN.`;
+        document.getElementById('latest-message').innerHTML = `<span style="color:#f87171; font-weight:bold;">SYSTEM:</span> Scan failed. Please try a different angle or lighting.`;
     }
 }
 
@@ -176,7 +193,9 @@ scannedInput.addEventListener('input', (e) => {
     }
 });
 
-function addLog(msg) { document.getElementById('latest-message').innerText = msg; }
+function addLog(msg) { 
+    document.getElementById('latest-message').innerHTML = `<span class="log-entry latest">${msg}</span>`; 
+}
 
 function checkCurrencyMatch() { 
     captureBtn.classList.toggle('disabled-btn', awaySelect.value === homeSelect.value); 
