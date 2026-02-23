@@ -30,7 +30,6 @@ function initGPS() {
         navigator.geolocation.getCurrentPosition((pos) => {
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
-            // Detection for Eastern Shore / MD area
             if (lat > 37 && lat < 41 && lon > -78 && lon < -74) {
                 awaySelect.value = "USD";
                 addLog("GPS: Maryland detected. Set to USD.");
@@ -44,13 +43,12 @@ function initGPS() {
 const torchBtn = document.getElementById('torch-button');
 let isTorchOn = false;
 
-// Manual Torch Toggle
 torchBtn.addEventListener('click', async () => {
     if (streamTrack && streamTrack.getCapabilities().torch) {
         isTorchOn = !isTorchOn;
         try {
             await streamTrack.applyConstraints({ advanced: [{ torch: isTorchOn }] });
-            torchBtn.style.background = isTorchOn ? '#fbbf24' : '#475569'; // Turns gold when on
+            torchBtn.style.background = isTorchOn ? '#fbbf24' : '#475569'; 
         } catch (e) { console.log("Torch constraint error", e); }
     } else {
         addLog("Flashlight not supported on this device.");
@@ -68,7 +66,6 @@ captureBtn.addEventListener('click', async () => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Auto-turn off the torch after scanning if the user left it on
         if (streamTrack) {
             try {
                 isTorchOn = false;
@@ -80,7 +77,7 @@ captureBtn.addEventListener('click', async () => {
         }
         
         const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
-        addLog("Auditing Receipt...");
+        addLog("Analyzing Receipt...");
         analyzeReceipt(base64Image);
         
     }, 500); 
@@ -92,10 +89,10 @@ async function analyzeReceipt(base64Image) {
         return;
     }
 
-    // The upgraded AI Prompt with Persona and Rip-Off detection
+    // Friendly, personalized AI Prompt
     const promptText = `Analyze this receipt. Return ONLY a JSON object with two keys:
     1. 'total': the final total amount to pay (as a number).
-    2. 'advice': Act as a witty, slightly sarcastic travel auditor. First, evaluate if the prices seem fair or if it looks like a 'tourist rip-off'. Second, make a humorous, tongue-in-cheek observation about the items bought—feel free to comment on excessive beer consumption, jokingly ask if Kate approved the expense, or suggest the money would have been better spent on gear for the Nikon Z8. Keep the response to 2 or 3 short, punchy sentences.`;
+    2. 'advice': Act as a friendly, observant travel companion. First, gently note if the prices seem reasonable for the region. Second, make a warm, personalized observation about the items bought—perhaps a positive note about trying the local cuisine, picking up something nice for Kate, or fueling up for a day of nature photography. Keep the response to 2 or 3 short, helpful sentences.`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`;
 
@@ -123,7 +120,7 @@ async function analyzeReceipt(base64Image) {
         const result = JSON.parse(rawText);
 
         scannedInput.value = result.total;
-        document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:bold;">AUDITOR:</span> ${result.advice}`;
+        document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:bold;">GEMINI:</span> ${result.advice}`;
         
         convertCurrency(result.total);
 
@@ -148,18 +145,13 @@ async function convertCurrency(amount) {
         if (data.result === "success") {
             const rate = data.rates[home];
             const result = (amount * rate).toFixed(2);
-            
             document.getElementById('usd-total').innerText = `${result} ${home}`;
-            document.getElementById('current-rate').innerText = rate.toFixed(4);
-            document.getElementById('rate-away').innerText = away;
-            document.getElementById('rate-home').innerText = home;
         }
     } catch (err) { 
         addLog("Rate API Error. Cannot fetch live currency.");
     }
 }
 
-// Manual Fallback: Recalculate if the user types a new number into the input field
 scannedInput.addEventListener('input', (e) => {
     const val = parseFloat(e.target.value);
     if (!isNaN(val)) {
@@ -177,7 +169,12 @@ retakeBtn.addEventListener('click', () => {
 });
 
 function addLog(msg) { document.getElementById('latest-message').innerText = msg; }
-function checkCurrencyMatch() { captureBtn.classList.toggle('disabled-btn', awaySelect.value === homeSelect.value); }
+
+// Dynamically updates the currency tag next to the input field
+function checkCurrencyMatch() { 
+    captureBtn.classList.toggle('disabled-btn', awaySelect.value === homeSelect.value); 
+    document.getElementById('scanned-currency').innerText = awaySelect.value;
+}
 
 awaySelect.addEventListener('change', checkCurrencyMatch);
 homeSelect.addEventListener('change', checkCurrencyMatch);
