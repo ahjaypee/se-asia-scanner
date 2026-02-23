@@ -53,10 +53,11 @@ function updateWorkspace() {
         totalsPanel.classList.add('hidden');
         logContainer.classList.add('expanded');
     }
+    // The SCANNED AMT chip should show the AWAY currency
     document.getElementById('scanned-currency').innerText = awaySelect.value;
 }
 
-// Mode Selection & Triple Tap Logic
+// Mode Selection & Triple Tap Logic (Upgraded for Zero Lag)
 modeChips.forEach(chip => {
     chip.addEventListener('click', () => {
         clickCount++;
@@ -243,7 +244,9 @@ async function analyzeImage(base64Image) {
         const result = JSON.parse(rawText);
 
         if (currentScanMode === 'receipt' && result.total > 0) {
+            // Place the scanned total in the AWAY column's input field
             scannedInput.value = result.total;
+            // Trigger the conversion to populate the HOME column's total field
             convertCurrency(result.total);
         } else {
             scannedInput.value = "";
@@ -283,6 +286,7 @@ async function convertCurrency(amount) {
         if (data.result === "success") {
             const rate = data.rates[home];
             const result = (amount * rate).toFixed(2);
+            // Place the converted total in the HOME column's display field
             document.getElementById('usd-total').innerText = `${result} ${home}`;
         }
     } catch (err) { addLog("Rate API Error. Cannot fetch live currency."); }
