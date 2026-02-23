@@ -1,29 +1,127 @@
 const video = document.getElementById('camera-stream');
 const captureBtn = document.getElementById('scanner-button');
-const awaySelect = document.getElementById('country-selector');
+const torchBtn = document.getElementById('torch-button');
+const awaySelect = document.getElementById('away-currency');
 const homeSelect = document.getElementById('home-currency');
 const scannedInput = document.getElementById('scanned-input');
 const modeChips = document.querySelectorAll('.mode-chip');
 
+const currencyPanel = document.getElementById('currency-panel');
+const totalsPanel = document.getElementById('totals-panel');
+const logContainer = document.getElementById('log-container');
+
 let streamTrack = null;
 let isCameraActive = false;
+let isProcessing = false;
 let currentScanMode = 'receipt';
 
+// Triple Tap Variables
+let clickCount = 0;
+let clickTimer;
+
 window.onload = () => {
+    loadSettings();
     startCamera();
-    initGPS();
-    checkCurrencyMatch();
+    updateWorkspace();
 };
 
-// Mode Chip Selection Logic
+// Local Storage Memory
+function saveSettings() {
+    localStorage.setItem('tsp_home', homeSelect.value);
+    localStorage.setItem('tsp_away', awaySelect.value);
+    localStorage.setItem('tsp_mode', currentScanMode);
+}
+
+function loadSettings() {
+    if (localStorage.getItem('tsp_home')) homeSelect.value = localStorage.getItem('tsp_home');
+    if (localStorage.getItem('tsp_away')) awaySelect.value = localStorage.getItem('tsp_away');
+    if (localStorage.getItem('tsp_mode')) currentScanMode = localStorage.getItem('tsp_mode');
+    
+    modeChips.forEach(c => {
+        c.classList.toggle('active', c.getAttribute('data-mode') === currentScanMode);
+    });
+}
+
+// Workspace UI Toggle
+function updateWorkspace() {
+    if (currentScanMode === 'receipt') {
+        currencyPanel.classList.remove('hidden');
+        totalsPanel.classList.remove('hidden');
+        logContainer.classList.remove('expanded');
+    } else {
+        currencyPanel.classList.add('hidden');
+        totalsPanel.classList.add('hidden');
+        logContainer.classList.add('expanded');
+    }
+    document.getElementById('scanned-currency').innerText = awaySelect.value;
+}
+
+// Mode Selection & Triple Tap Logic
 modeChips.forEach(chip => {
     chip.addEventListener('click', () => {
-        modeChips.forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        currentScanMode = chip.getAttribute('data-mode');
+        clickCount++;
+        if (clickCount === 1) {
+            clickTimer = setTimeout(() => {
+                if (clickCount < 3) {
+                    // Standard single tap mode change
+                    modeChips.forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    currentScanMode = chip.getAttribute('data-mode');
+                    saveSettings();
+                    updateWorkspace();
+                    addLog(`Mode switched to: ${currentScanMode.toUpperCase()}`);
+                    if (!isCameraActive && !isProcessing) wakeCamera();
+                }
+                clickCount = 0;
+            }, 400); 
+        } else if (clickCount === 3) {
+            // Triple tap help triggered
+            clearTimeout(clickTimer);
+            clickCount = 0;
+            triggerHelp(chip.getAttribute('data-mode'));
+        }
     });
 });
 
+function triggerHelp(mode) {
+    let helpMsg = "";
+    if (mode === "receipt") helpMsg = "Goal: Audit expenses. Ensure the receipt is flat and well-lit. Tap SCAN to calculate totals in your Home currency.";
+    if (mode === "menu") helpMsg = "Goal: Translate and find specialties. Fill the screen with the menu text. Tap SCAN to get regional recommendations.";
+    if (mode === "food") helpMsg = "Goal: Identify a dish. Ensure the plate fills the frame. Tap SCAN to learn about the ingredients and origins.";
+    document.getElementById('latest-message').innerHTML = `<span style="color:#38bdf8; font-weight:bold;">HELP:</span> ${helpMsg}`;
+}
+
+// GPS Logic (using a free, keyless IP-based geo API)
+async function fetchGPSCurrency(targetSelectId, locationName) {
+    addLog(`📍 Locating ${locationName}...`);
+    try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        if (data.currency) {
+            const select = document.getElementById(targetSelectId);
+            const exists = Array.from(select.options).some(opt => opt.value === data.currency);
+            
+            if (exists) {
+                select.value = data.currency;
+                addLog(`📍 Found you in ${data.country_name}. Set to ${data.currency}.`);
+                saveSettings();
+                updateWorkspace();
+            } else {
+                addLog(`📍 Found you in ${data.country_name}, but ${data.currency} is not in your list.`);
+            }
+        }
+    } catch (e) {
+        addLog("📍 GPS request failed. Please select manually.");
+    }
+}
+
+document.getElementById('home-gps').addEventListener('click', () => fetchGPSCurrency('home-currency', 'Home'));
+document.getElementById('away-gps').addEventListener('click', () => fetchGPSCurrency('away-currency', 'Away'));
+
+homeSelect.addEventListener('change', () => { saveSettings(); updateWorkspace(); });
+awaySelect.addEventListener('change', () => { saveSettings(); updateWorkspace(); });
+
+// Camera Loop
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -32,34 +130,18 @@ async function startCamera() {
         video.srcObject = stream;
         streamTrack = stream.getVideoTracks()[0];
         video.onloadedmetadata = () => video.play();
-        video.style.display = "block";
-        
-        isCameraActive = true;
-        captureBtn.innerText = "SCAN";
-        scannedInput.value = "";
-        document.getElementById('usd-total').innerText = "--";
-        addLog("Camera Live. Select mode and scan.");
+        wakeCamera();
     } catch (err) { addLog("Camera Access Denied"); }
 }
 
-function initGPS() {
-    if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition((pos) => {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-            if (lat > 37 && lat < 41 && lon > -78 && lon < -74) {
-                awaySelect.value = "USD";
-                addLog("GPS: Maryland detected. Set to USD.");
-            } else {
-                addLog("Abroad? Please select Local Currency.");
-            }
-        });
-    }
+function wakeCamera() {
+    video.play();
+    isCameraActive = true;
+    captureBtn.classList.remove('error-pulse');
+    addLog("Ready. Point and SCAN.");
 }
 
-const torchBtn = document.getElementById('torch-button');
 let isTorchOn = false;
-
 torchBtn.addEventListener('click', async () => {
     if (streamTrack && streamTrack.getCapabilities().torch) {
         isTorchOn = !isTorchOn;
@@ -72,15 +154,25 @@ torchBtn.addEventListener('click', async () => {
     }
 });
 
+// The Unified SCAN Button Flow
 captureBtn.addEventListener('click', async () => {
+    if (isProcessing) return; // Prevent double-taps while AI thinks
+    
     if (!isCameraActive) {
-        addLog("Camera Restarting...");
-        startCamera();
+        // State 2/3: User is waking camera up after reading results or a failure
+        wakeCamera();
         return;
     }
 
+    // State 1: Camera is live. Time to snap.
     if (navigator.vibrate) navigator.vibrate(50);
-    addLog("Analyzing visual data...");
+    isProcessing = true;
+    captureBtn.classList.add('processing-btn');
+    addLog("Processing visual data...");
+
+    // Quick flash to simulate shutter
+    video.style.opacity = 0.5;
+    setTimeout(() => { video.style.opacity = 1; }, 100);
 
     setTimeout(async () => {
         const canvas = document.createElement('canvas');
@@ -89,73 +181,63 @@ captureBtn.addEventListener('click', async () => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        if (streamTrack) {
+        // Freeze the video feed
+        video.pause();
+        isCameraActive = false;
+        
+        // Turn off torch if left on
+        if (streamTrack && isTorchOn) {
             try {
                 isTorchOn = false;
                 torchBtn.style.background = '#475569';
                 await streamTrack.applyConstraints({ advanced: [{ torch: false }] });
             } catch(e){}
-            streamTrack.stop();
-            video.style.display = "none";
         }
         
-        isCameraActive = false;
-        captureBtn.innerText = "SCAN AGAIN"; 
         const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
-        
         analyzeImage(base64Image);
         
-    }, 500); 
+    }, 150); 
 });
 
 async function analyzeImage(base64Image) {
     if (!API_KEYS.GEMINI_KEY) {
-        addLog("AI Error: Check config.js for GEMINI_KEY");
+        handleError("AI Error: Check config.js for GEMINI_KEY");
         return;
     }
 
     let promptText = "";
-
     if (currentScanMode === "receipt") {
         promptText = `Analyze this receipt. Return ONLY a JSON object with two keys:
         1. 'total': the final total amount to pay (as a number).
-        2. 'advice': Act as a friendly travel companion. Gently note if prices seem reasonable, and make a warm personalized observation about the items bought (perhaps mentioning picking something up for Kate, or fueling up for photography). Keep to 2-3 short, helpful sentences.`;
+        2. 'advice': Act as a professional travel guide. Note if prices seem reasonable. Make a helpful, general observation about the items. Keep to 2 short sentences.`;
     } else if (currentScanMode === "menu") {
         promptText = `Analyze this menu. Return ONLY a JSON object with two keys:
         1. 'total': return 0.
-        2. 'advice': Act as a knowledgeable local food guide. Identify 1 or 2 standout regional specialties. Keep the user's love of cooking and their wife Kate in mind—maybe suggest a dish she might like or something inspiring to cook later. Comment briefly on whether prices look like standard local rates. Keep to 2-3 short, engaging sentences.`;
+        2. 'advice': Act as an expert culinary guide. Highlight 1 or 2 standout regional specialties on this menu. Suggest asking the staff about a specific dish. Note price-to-value. Keep to 3 engaging sentences.`;
     } else if (currentScanMode === "food") {
         promptText = `Analyze this photo of food. Return ONLY a JSON object with two keys:
         1. 'total': return 0.
-        2. 'advice': Act as an enthusiastic culinary expert. Identify the dish and its key ingredients. Since the user shoots with a Nikon Z8, maybe compliment the plating or suggest a photography angle, and add a fun fact about the dish's origin. Keep to 2-3 short, mouth-watering sentences.`;
+        2. 'advice': Act as an enthusiastic culinary expert. Identify the dish and its key ingredients. Provide a brief cultural origin or fun fact. Keep to 2 or 3 engaging sentences.`;
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`;
-
     const payload = {
         contents: [{
-            parts: [
-                { text: promptText },
-                { inline_data: { mime_type: "image/jpeg", data: base64Image } }
-            ]
+            parts: [{ text: promptText }, { inline_data: { mime_type: "image/jpeg", data: base64Image } }]
         }],
         generationConfig: { response_mime_type: "application/json" }
     };
 
     try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const data = await response.json();
-
         if (data.error) throw new Error(data.error.message);
 
         const rawText = data.candidates[0].content.parts[0].text;
         const result = JSON.parse(rawText);
 
-        if (result.total > 0) {
+        if (currentScanMode === 'receipt' && result.total > 0) {
             scannedInput.value = result.total;
             convertCurrency(result.total);
         } else {
@@ -163,52 +245,48 @@ async function analyzeImage(base64Image) {
             document.getElementById('usd-total').innerText = "--";
         }
         
+        // Success
         document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:normal;">${result.advice}</span>`;
+        resetButtonState(false);
 
     } catch (err) {
         console.error("Extraction Error:", err);
-        document.getElementById('latest-message').innerHTML = `<span style="color:#f87171; font-weight:bold;">SYSTEM:</span> Scan failed. Please try a different angle or lighting.`;
+        handleError("Scan failed. Please tap SCAN to wake camera and try a different angle.");
     }
+}
+
+function handleError(msg) {
+    document.getElementById('latest-message').innerHTML = `<span style="color:#f87171; font-weight:bold;">SYSTEM:</span> ${msg}`;
+    resetButtonState(true);
+}
+
+function resetButtonState(isError) {
+    isProcessing = false;
+    captureBtn.classList.remove('processing-btn');
+    if (isError) captureBtn.classList.add('error-pulse');
 }
 
 async function convertCurrency(amount) {
     const away = awaySelect.value;
     const home = homeSelect.value;
-    
     if (!amount || isNaN(amount)) return;
 
     try {
         const url = `https://open.er-api.com/v6/latest/${away}`;
         const response = await fetch(url);
         const data = await response.json();
-
         if (data.result === "success") {
             const rate = data.rates[home];
             const result = (amount * rate).toFixed(2);
             document.getElementById('usd-total').innerText = `${result} ${home}`;
         }
-    } catch (err) { 
-        addLog("Rate API Error. Cannot fetch live currency.");
-    }
+    } catch (err) { addLog("Rate API Error. Cannot fetch live currency."); }
 }
 
 scannedInput.addEventListener('input', (e) => {
     const val = parseFloat(e.target.value);
-    if (!isNaN(val)) {
-        convertCurrency(val);
-    } else {
-        document.getElementById('usd-total').innerText = "--";
-    }
+    if (!isNaN(val)) convertCurrency(val);
+    else document.getElementById('usd-total').innerText = "--";
 });
 
-function addLog(msg) { 
-    document.getElementById('latest-message').innerHTML = `<span class="log-entry latest">${msg}</span>`; 
-}
-
-function checkCurrencyMatch() { 
-    captureBtn.classList.toggle('disabled-btn', awaySelect.value === homeSelect.value); 
-    document.getElementById('scanned-currency').innerText = awaySelect.value;
-}
-
-awaySelect.addEventListener('change', checkCurrencyMatch);
-homeSelect.addEventListener('change', checkCurrencyMatch);
+function addLog(msg) { document.getElementById('latest-message').innerHTML = `<span class="log-entry latest">${msg}</span>`; }

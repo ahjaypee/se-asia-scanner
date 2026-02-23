@@ -12,6 +12,7 @@
             --border: #1e293b;
             --text-dim: #94a3b8;
             --gold: #fbbf24;
+            --error: #ef4444;
         }
 
         body { 
@@ -21,90 +22,82 @@
         }
 
         .app-frame { 
-            width: 100%;
-            max-width: 450px; display: flex; flex-direction: column; background: var(--bg);
+            width: 100%; max-width: 450px; display: flex; flex-direction: column; background: var(--bg);
         }
 
         #camera-container {
-            width: 100%;
-            height: 38vh; background: #000; position: relative; border-bottom: 2px solid var(--accent);
+            width: 100%; height: 38vh; background: #000; position: relative; border-bottom: 2px solid var(--accent);
             display: flex; align-items: center; justify-content: center;
         }
         #camera-stream { width: 100%; height: 100%; object-fit: cover; }
 
         .controls-area {
-            flex: 1;
-            overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px;
+            flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px;
         }
 
-        .row { display: flex; gap: 10px; align-items: stretch; } 
+        .row { display: flex; gap: 10px; align-items: stretch; width: 100%; } 
         .col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 
         .label { color: var(--text-dim); font-size: 0.7rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }
 
-        /* New Tap-Friendly Mode Chips */
         .mode-chip {
-            background: var(--card-bg); border: 1px solid var(--border);
-            color: var(--text-dim); padding: 10px 5px; border-radius: 10px;
-            font-size: 13px; font-weight: bold; flex: 1; cursor: pointer;
-            transition: all 0.2s; text-align: center;
+            background: var(--card-bg); border: 1px solid var(--border); color: var(--text-dim); 
+            padding: 10px 5px; border-radius: 10px; font-size: 13px; font-weight: bold; flex: 1; 
+            cursor: pointer; transition: all 0.2s; text-align: center; user-select: none;
         }
-        .mode-chip.active {
-            background: rgba(56, 189, 248, 0.1); border-color: var(--accent); color: var(--accent);
-        }
+        .mode-chip.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 
         select { 
-            background: var(--card-bg);
-            color: var(--accent); border: 1px solid var(--border);
-            padding: 10px; border-radius: 10px; font-size: 14px; width: 100%; outline: none;
-            font-weight: bold;
+            background: var(--card-bg); color: var(--accent); border: 1px solid var(--border);
+            padding: 10px; border-radius: 8px; font-size: 13px; outline: none; font-weight: bold; flex: 1;
+        }
+        
+        .gps-btn {
+            background: #1e293b; color: white; border: 1px solid var(--border); 
+            padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;
         }
 
         .btn { 
-            padding: 16px;
-            border-radius: 12px; font-size: 13px; border: none; font-weight: 800; 
+            padding: 16px; border-radius: 12px; font-size: 14px; border: none; font-weight: 900; 
             text-transform: uppercase; cursor: pointer; flex: 1; transition: all 0.2s;
             display: flex; justify-content: center; align-items: center;
         }
         #scanner-button { background: var(--accent); color: var(--bg); }
-        .disabled-btn { opacity: 0.2; pointer-events: none; filter: grayscale(1); }
+        
+        /* CSS Animations for the Scan Loop */
+        .processing-btn { opacity: 0.5; pointer-events: none; filter: grayscale(1); }
+        .error-pulse { animation: pulseError 1.5s infinite; color: white !important; }
+        @keyframes pulseError {
+            0% { background: var(--error); }
+            50% { background: #7f1d1d; }
+            100% { background: var(--error); }
+        }
 
         .stat-card { 
-            background: var(--card-bg);
-            padding: 12px; border-radius: 12px; border: 1px solid var(--border); flex: 1;
-            box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);
+            background: var(--card-bg); padding: 12px; border-radius: 12px; border: 1px solid var(--border); flex: 1;
         }
         .val { font-size: 1.2rem; font-weight: 900; margin-top: 5px; white-space: nowrap; }
         
-        /* Fixed Input styling so it hugs the currency code */
         .input-val {
-            background: transparent; border: none; color: white; width: 85px; /* Locked width */
-            outline: none; font-family: inherit; padding: 0;
-            border-bottom: 1px dashed var(--text-dim); border-radius: 0;
-            text-align: left;
+            background: transparent; border: none; color: white; width: 85px; outline: none; 
+            font-family: inherit; padding: 0; border-bottom: 1px dashed var(--text-dim); text-align: left;
         }
         .input-val:focus { border-bottom-color: var(--accent); }
 
-        /* Smooth Mobile Scrolling Message Box */
         #log-container {
-            background: #000;
-            padding: 12px; border-radius: 12px; border: 1px dashed var(--border);
-            flex: 1; min-height: 100px; max-height: 180px; 
-            display: flex; align-items: flex-start; justify-content: flex-start;
-            overflow-y: auto; -webkit-overflow-scrolling: touch;
+            background: #000; padding: 12px; border-radius: 12px; border: 1px dashed var(--border);
+            flex: 1; min-height: 80px; display: flex; align-items: flex-start; justify-content: flex-start;
+            overflow-y: auto; -webkit-overflow-scrolling: touch; transition: all 0.3s;
         }
+        #log-container.expanded { min-height: 180px; }
         
         #latest-message {
-            background: rgba(251, 191, 36, 0.1);
-            border-left: 4px solid #fbbf24;
-            padding: 12px;
-            border-radius: 4px;
-            color: #f3f4f6;
-            width: 100%;
-            line-height: 1.5;
-            font-size: 0.9rem;
+            background: rgba(251, 191, 36, 0.1); border-left: 4px solid #fbbf24; padding: 12px;
+            border-radius: 4px; color: #f3f4f6; width: 100%; line-height: 1.5; font-size: 0.95rem;
         }
-        .log-entry.latest { color: var(--text-dim); font-weight: 500; font-style: italic; border: none; background: transparent; padding: 0;}
+        .log-entry.latest { color: var(--text-dim); font-weight: 500; font-style: normal; border: none; background: transparent; padding: 0;}
+        
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -116,61 +109,65 @@
 
     <div class="controls-area">
         <div class="row" id="mode-selector">
-            <button class="mode-chip" data-mode="menu">📖 Menu</button>
-            <button class="mode-chip" data-mode="food">🍽️ Dish</button>
-            <button class="mode-chip active" data-mode="receipt">🧾 Receipt</button>
+            <button class="mode-chip" data-mode="menu">📖 MENU</button>
+            <button class="mode-chip" data-mode="food">🍽️ DISH</button>
+            <button class="mode-chip active" data-mode="receipt">🧾 RECEIPT</button>
         </div>
 
-        <div class="row" style="align-items: flex-end;">
-            <div class="col">
-                <div class="label">AWAY (GPS)</div>
-                <select id="country-selector">
-                    <option value="USD">🇺🇸 USD</option>
-                    <option value="CAD">🇨🇦 CAD</option>
-                    <option value="EUR">🇪🇺 EUR</option>
-                    <option value="GBP">🇬🇧 GBP</option>
-                    <option value="THB" selected>🇹🇭 THB</option>
-                    <option value="VND">🇻🇳 VND</option>
-                    <option value="SGD">🇸🇬 SGD</option>
-                    <option value="QAR">🇶🇦 QAR</option>
-                    <option value="NZD">🇳🇿 NZD</option>
-                    <option value="AUD">🇦🇺 AUD</option>
-                </select>
-            </div>
+        <div class="row" id="currency-panel">
             <div class="col">
                 <div class="label">HOME</div>
-                <select id="home-currency">
-                    <option value="USD" selected>🇺🇸 USD</option>
-                    <option value="CAD">🇨🇦 CAD</option>
-                    <option value="EUR">🇪🇺 EUR</option>
-                    <option value="GBP">🇬🇧 GBP</option>
-                    <option value="AUD">🇦🇺 AUD</option>
-                    <option value="NZD">🇳🇿 NZD</option>
-                    <option value="THB">🇹🇭 THB</option>
-                    <option value="VND">🇻🇳 VND</option>
-                    <option value="SGD">🇸🇬 SGD</option>
-                    <option value="QAR">🇶🇦 QAR</option>
-                </select>
+                <div class="row" style="gap: 5px;">
+                    <button id="home-gps" class="gps-btn">📍 GPS</button>
+                    <select id="home-currency">
+                        <option value="USD">🇺🇸 USD</option>
+                        <option value="CAD">🇨🇦 CAD</option>
+                        <option value="EUR">🇪🇺 EUR</option>
+                        <option value="GBP">🇬🇧 GBP</option>
+                        <option value="AUD">🇦🇺 AUD</option>
+                        <option value="NZD">🇳🇿 NZD</option>
+                        <option value="THB">🇹🇭 THB</option>
+                        <option value="VND">🇻🇳 VND</option>
+                        <option value="SGD">🇸🇬 SGD</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col">
+                <div class="label">AWAY</div>
+                <div class="row" style="gap: 5px;">
+                    <button id="away-gps" class="gps-btn">📍 GPS</button>
+                    <select id="away-currency">
+                        <option value="USD">🇺🇸 USD</option>
+                        <option value="CAD">🇨🇦 CAD</option>
+                        <option value="EUR">🇪🇺 EUR</option>
+                        <option value="GBP">🇬🇧 GBP</option>
+                        <option value="THB" selected>🇹🇭 THB</option>
+                        <option value="VND">🇻🇳 VND</option>
+                        <option value="SGD">🇸🇬 SGD</option>
+                        <option value="AUD">🇦🇺 AUD</option>
+                        <option value="NZD">🇳🇿 NZD</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="totals-panel">
+            <div class="stat-card">
+                <div class="label">SCANNED AMT</div>
+                <div style="display: flex; align-items: baseline; gap: 4px; margin-top: 5px;">
+                    <input type="number" id="scanned-input" class="val input-val" placeholder="0.00" step="0.01">
+                    <span id="scanned-currency" class="val" style="color: white; font-size: 1.1rem;">THB</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="label">HOME TOTAL</div>
+                <div id="usd-total" class="val" style="color:var(--gold)">--</div>
             </div>
         </div>
 
         <div class="row">
             <button id="torch-button" class="btn" style="flex: 0.25; background: #475569; font-size: 1.5rem; padding: 0;">💡</button>
             <button id="scanner-button" class="btn">SCAN</button>
-        </div>
-
-        <div class="row">
-            <div class="stat-card">
-                <div class="label" id="away-label-text">SCANNED AMT</div>
-                <div style="display: flex; align-items: baseline; gap: 4px; margin-top: 5px;">
-                    <input type="number" id="scanned-input" class="val input-val" placeholder="0.00" step="0.01">
-                    <span id="scanned-currency" class="val" style="color: white;">THB</span>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="label" id="home-label-text">HOME TOTAL</div>
-                <div id="usd-total" class="val" style="color:var(--gold)">--</div>
-            </div>
         </div>
 
         <div id="log-container">
