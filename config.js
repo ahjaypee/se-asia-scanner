@@ -1,4 +1,3 @@
 const API_KEYS = {
-    CURRENCY_KEY: "b5af70e98175c3764fda6084",
-    GEMINI_KEY: "AIzaSyAKoGmRlBPP7Cs8I-ZMYoJY21Z1RGEWotk" // Renamed from AI_KEY
+   GEMINI_KEY: "AIzaSyDeP1lspzOgV1zywb9LDk7CZM90rUqvpyg" // Renamed from AI_KEY
 };
