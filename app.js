@@ -60,25 +60,30 @@ function updateWorkspace() {
 modeChips.forEach(chip => {
     chip.addEventListener('click', () => {
         clickCount++;
-        if (clickCount === 1) {
-            clickTimer = setTimeout(() => {
-                if (clickCount < 3) {
-                    // Standard single tap mode change
-                    modeChips.forEach(c => c.classList.remove('active'));
-                    chip.classList.add('active');
-                    currentScanMode = chip.getAttribute('data-mode');
-                    saveSettings();
-                    updateWorkspace();
-                    addLog(`Mode switched to: ${currentScanMode.toUpperCase()}`);
-                    if (!isCameraActive && !isProcessing) wakeCamera();
-                }
-                clickCount = 0;
-            }, 400); 
-        } else if (clickCount === 3) {
-            // Triple tap help triggered
-            clearTimeout(clickTimer);
-            clickCount = 0;
-            triggerHelp(chip.getAttribute('data-mode'));
+        
+        // 1. Instantly update the UI so the app feels lightning fast
+        modeChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentScanMode = chip.getAttribute('data-mode');
+        saveSettings();
+        updateWorkspace();
+        
+        // 2. Clear any existing timers so we can track rapid clicks
+        clearTimeout(clickTimer);
+        
+        // 3. Start a generous 500ms countdown for the user to finish tapping
+        clickTimer = setTimeout(() => {
+            clickCount = 0; // Reset the counter
+            // Only wake the camera and log the action after they stop tapping
+            addLog(`Mode switched to: ${currentScanMode.toUpperCase()}`);
+            if (!isCameraActive && !isProcessing) wakeCamera();
+        }, 500);
+
+        // 4. Intercept! If they hit 3 rapid taps, show the Help menu
+        if (clickCount === 3) {
+            clickCount = 0; // Reset
+            clearTimeout(clickTimer); // Cancel the standard camera wake
+            triggerHelp(currentScanMode);
         }
     });
 });
