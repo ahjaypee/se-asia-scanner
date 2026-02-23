@@ -1,10 +1,10 @@
 const video = document.getElementById('camera-stream');
 const captureBtn = document.getElementById('scanner-button');
-const retakeBtn = document.getElementById('reset-button');
 const awaySelect = document.getElementById('country-selector');
 const homeSelect = document.getElementById('home-currency');
 const scannedInput = document.getElementById('scanned-input');
 let streamTrack = null;
+let isCameraActive = false; // Tracks whether to scan or restart
 
 window.onload = () => {
     startCamera();
@@ -21,7 +21,12 @@ async function startCamera() {
         streamTrack = stream.getVideoTracks()[0];
         video.onloadedmetadata = () => video.play();
         video.style.display = "block";
-        addLog("Camera Live");
+        
+        isCameraActive = true;
+        captureBtn.innerText = "SCAN";
+        scannedInput.value = "";
+        document.getElementById('usd-total').innerText = "--";
+        addLog("Camera Live. Ready to scan.");
     } catch (err) { addLog("Camera Access Denied"); }
 }
 
@@ -55,7 +60,15 @@ torchBtn.addEventListener('click', async () => {
     }
 });
 
+// The smart single-button workflow
 captureBtn.addEventListener('click', async () => {
+    if (!isCameraActive) {
+        // If camera is off, this acts as the "RETAKE" button
+        addLog("Camera Restarting...");
+        startCamera();
+        return;
+    }
+
     if (navigator.vibrate) navigator.vibrate(50);
     addLog("Snapping photo...");
 
@@ -76,7 +89,10 @@ captureBtn.addEventListener('click', async () => {
             video.style.display = "none";
         }
         
+        isCameraActive = false;
+        captureBtn.innerText = "SCAN AGAIN"; // Changes button state
         const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
+        
         addLog("Analyzing Receipt...");
         analyzeReceipt(base64Image);
         
@@ -89,7 +105,6 @@ async function analyzeReceipt(base64Image) {
         return;
     }
 
-    // Friendly, personalized AI Prompt
     const promptText = `Analyze this receipt. Return ONLY a JSON object with two keys:
     1. 'total': the final total amount to pay (as a number).
     2. 'advice': Act as a friendly, observant travel companion. First, gently note if the prices seem reasonable for the region. Second, make a warm, personalized observation about the items bought—perhaps a positive note about trying the local cuisine, picking up something nice for Kate, or fueling up for a day of nature photography. Keep the response to 2 or 3 short, helpful sentences.`;
@@ -126,8 +141,8 @@ async function analyzeReceipt(base64Image) {
 
     } catch (err) {
         console.error("Extraction Error:", err);
-        addLog("AI couldn't read receipt. Enter amount manually.");
-        document.getElementById('latest-message').innerHTML = `<span style="color:#f87171; font-weight:bold;">SYSTEM:</span> Tap the 'Scanned Amt' box to type manually.`;
+        // Updated fallback message with clear instructions
+        document.getElementById('latest-message').innerHTML = `<span style="color:#f87171; font-weight:bold;">SYSTEM:</span> Scan failed. Please type the amount manually or tap SCAN AGAIN.`;
     }
 }
 
@@ -161,16 +176,8 @@ scannedInput.addEventListener('input', (e) => {
     }
 });
 
-retakeBtn.addEventListener('click', () => {
-    scannedInput.value = "";
-    document.getElementById('usd-total').innerText = "--";
-    addLog("Camera Restarting...");
-    startCamera();
-});
-
 function addLog(msg) { document.getElementById('latest-message').innerText = msg; }
 
-// Dynamically updates the currency tag next to the input field
 function checkCurrencyMatch() { 
     captureBtn.classList.toggle('disabled-btn', awaySelect.value === homeSelect.value); 
     document.getElementById('scanned-currency').innerText = awaySelect.value;

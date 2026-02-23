@@ -37,7 +37,7 @@
             overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px;
         }
 
-        .row { display: flex; gap: 12px; align-items: flex-end; }
+        .row { display: flex; gap: 12px; align-items: stretch; } /* Changed to stretch to enforce equal button heights */
         .col { flex: 1; display: flex; flex-direction: column; gap: 5px; }
 
         .label { color: var(--text-dim); font-size: 0.7rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }
@@ -53,8 +53,8 @@
             padding: 18px;
             border-radius: 12px; font-size: 13px; border: none; font-weight: 800; 
             text-transform: uppercase; cursor: pointer; flex: 1; transition: all 0.2s;
+            display: flex; justify-content: center; align-items: center; /* Centers text/emoji perfectly */
         }
-        #reset-button { background: #334155; color: var(--text-dim); }
         #scanner-button { background: var(--accent); color: var(--bg); }
         .disabled-btn { opacity: 0.2; pointer-events: none; filter: grayscale(1); }
 
@@ -72,7 +72,6 @@
         }
         .input-val:focus { border-bottom-color: var(--accent); }
 
-        /* Expanded Log Container */
         #log-container {
             background: #000;
             padding: 15px; border-radius: 12px; border: 1px dashed var(--border);
@@ -102,9 +101,9 @@
     </div>
 
     <div class="controls-area">
-        <div class="row">
+        <div class="row" style="align-items: flex-end;">
             <div class="col">
-                <div class="label">Away (Local)</div>
+                <div class="label">AWAY (GPS)</div>
                 <select id="country-selector">
                     <option value="USD">🇺🇸 USD</option>
                     <option value="CAD">🇨🇦 CAD</option>
@@ -119,7 +118,7 @@
                 </select>
             </div>
             <div class="col">
-                <div class="label">Home</div>
+                <div class="label">HOME</div>
                 <select id="home-currency">
                     <option value="USD" selected>🇺🇸 USD</option>
                     <option value="CAD">🇨🇦 CAD</option>
@@ -136,21 +135,20 @@
         </div>
 
         <div class="row">
-            <button id="reset-button" class="btn">RETAKE</button>
-            <button id="torch-button" class="btn" style="flex: 0.5; background: #475569; font-size: 1.2rem;">💡</button>
+            <button id="torch-button" class="btn" style="flex: 0.25; background: #475569; font-size: 1.5rem; padding: 0;">💡</button>
             <button id="scanner-button" class="btn">SCAN</button>
         </div>
 
         <div class="row">
             <div class="stat-card">
-                <div class="label" id="away-label-text">Scanned Amt (Edit)</div>
-                <div style="display: flex; align-items: center; gap: 6px; margin-top: 5px;">
-                    <input type="number" id="scanned-input" class="val input-val" placeholder="0.00" step="0.01">
-                    <span id="scanned-currency" style="color: var(--accent); font-weight: bold; font-size: 0.9rem;">THB</span>
+                <div class="label" id="away-label-text">SCANNED AMT</div>
+                <div style="display: flex; align-items: baseline; gap: 6px; margin-top: 5px;">
+                    <input type="number" id="scanned-input" class="val input-val" placeholder="0.00" step="0.01" style="flex: 1; min-width: 0;">
+                    <span id="scanned-currency" class="val" style="font-size: 1.1rem; color: white;">THB</span>
                 </div>
             </div>
             <div class="stat-card">
-                <div class="label" id="home-label-text">Home Total</div>
+                <div class="label" id="home-label-text">HOME TOTAL</div>
                 <div id="usd-total" class="val" style="color:var(--gold)">--</div>
             </div>
         </div>
