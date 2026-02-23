@@ -3,15 +3,26 @@ const captureBtn = document.getElementById('scanner-button');
 const awaySelect = document.getElementById('country-selector');
 const homeSelect = document.getElementById('home-currency');
 const scannedInput = document.getElementById('scanned-input');
-const scanModeSelect = document.getElementById('scan-mode');
+const modeChips = document.querySelectorAll('.mode-chip');
+
 let streamTrack = null;
 let isCameraActive = false;
+let currentScanMode = 'receipt';
 
 window.onload = () => {
     startCamera();
     initGPS();
     checkCurrencyMatch();
 };
+
+// Mode Chip Selection Logic
+modeChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+        modeChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentScanMode = chip.getAttribute('data-mode');
+    });
+});
 
 async function startCamera() {
     try {
@@ -27,7 +38,7 @@ async function startCamera() {
         captureBtn.innerText = "SCAN";
         scannedInput.value = "";
         document.getElementById('usd-total').innerText = "--";
-        addLog("Camera Live. Ready to scan.");
+        addLog("Camera Live. Select mode and scan.");
     } catch (err) { addLog("Camera Access Denied"); }
 }
 
@@ -103,19 +114,17 @@ async function analyzeImage(base64Image) {
         return;
     }
 
-    const mode = scanModeSelect.value;
     let promptText = "";
 
-    // Dynamic AI Personas based on the selected mode
-    if (mode === "receipt") {
+    if (currentScanMode === "receipt") {
         promptText = `Analyze this receipt. Return ONLY a JSON object with two keys:
         1. 'total': the final total amount to pay (as a number).
         2. 'advice': Act as a friendly travel companion. Gently note if prices seem reasonable, and make a warm personalized observation about the items bought (perhaps mentioning picking something up for Kate, or fueling up for photography). Keep to 2-3 short, helpful sentences.`;
-    } else if (mode === "menu") {
+    } else if (currentScanMode === "menu") {
         promptText = `Analyze this menu. Return ONLY a JSON object with two keys:
         1. 'total': return 0.
         2. 'advice': Act as a knowledgeable local food guide. Identify 1 or 2 standout regional specialties. Keep the user's love of cooking and their wife Kate in mind—maybe suggest a dish she might like or something inspiring to cook later. Comment briefly on whether prices look like standard local rates. Keep to 2-3 short, engaging sentences.`;
-    } else if (mode === "food") {
+    } else if (currentScanMode === "food") {
         promptText = `Analyze this photo of food. Return ONLY a JSON object with two keys:
         1. 'total': return 0.
         2. 'advice': Act as an enthusiastic culinary expert. Identify the dish and its key ingredients. Since the user shoots with a Nikon Z8, maybe compliment the plating or suggest a photography angle, and add a fun fact about the dish's origin. Keep to 2-3 short, mouth-watering sentences.`;
@@ -146,7 +155,6 @@ async function analyzeImage(base64Image) {
         const rawText = data.candidates[0].content.parts[0].text;
         const result = JSON.parse(rawText);
 
-        // If it's a menu or food, the total will be 0. We leave the boxes blank.
         if (result.total > 0) {
             scannedInput.value = result.total;
             convertCurrency(result.total);
