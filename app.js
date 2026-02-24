@@ -49,7 +49,6 @@ function resetTotals() {
     }
 }
 
-// Fixed workspace update that targets the exact new HTML tags
 function updateWorkspace() {
     if (currentScanMode === 'receipt') {
         currencyPanel.classList.remove('hidden');
@@ -212,6 +211,7 @@ async function analyzeImage(base64Image) {
         return;
     }
 
+    // Upgraded prompts requesting bulleted lists for menus and dishes
     let promptText = "";
     if (currentScanMode === "receipt") {
         promptText = `Analyze this receipt. Return ONLY a JSON object with two keys:
@@ -220,11 +220,11 @@ async function analyzeImage(base64Image) {
     } else if (currentScanMode === "menu") {
         promptText = `Analyze this menu. Return ONLY a JSON object with two keys:
         1. 'total': return 0.
-        2. 'advice': Act as an expert culinary guide. Highlight 1 or 2 standout regional specialties on this menu. Suggest asking the staff about a specific dish. Note price-to-value. Keep to 3 engaging sentences.`;
+        2. 'advice': Act as an expert culinary guide. Provide a brief introductory sentence. Then, use a bulleted list to highlight 1 or 2 standout regional specialties and suggest what to ask the staff. Conclude with a brief note on price-to-value.`;
     } else if (currentScanMode === "food") {
         promptText = `Analyze this photo of food. Return ONLY a JSON object with two keys:
         1. 'total': return 0.
-        2. 'advice': Act as an enthusiastic culinary expert. Identify the dish and its key ingredients. Provide a brief cultural origin or fun fact. Keep to 2 or 3 engaging sentences.`;
+        2. 'advice': Act as an enthusiastic culinary expert. Identify the dish in a short sentence. Then, use a bulleted list to outline its key ingredients and a fascinating cultural origin or fact.`;
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`;
@@ -250,7 +250,10 @@ async function analyzeImage(base64Image) {
             resetTotals();
         }
         
-        document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:normal;">${result.advice}</span>`;
+        // Convert the AI's plain-text line breaks (\n) into visual HTML line breaks (<br>)
+        const formattedAdvice = result.advice.replace(/\n/g, '<br>');
+        
+        document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:normal;">${formattedAdvice}</span>`;
         resetButtonState(false);
 
     } catch (err) {
@@ -274,35 +277,3 @@ async function convertCurrency(amount) {
     const away = awaySelect.value;
     const home = homeSelect.value;
     if (!amount || isNaN(amount)) return;
-
-    try {
-        const url = `https://open.er-api.com/v6/latest/${away}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        if (data.result === "success") {
-            const rate = data.rates[home];
-            const result = (amount * rate).toFixed(2);
-            
-            const usdTotalEl = document.getElementById('usd-total');
-            if (usdTotalEl) {
-                // Notice there is no appended currency string here anymore!
-                usdTotalEl.innerText = result;
-                
-                usdTotalEl.classList.remove('success-pulse');
-                void usdTotalEl.offsetWidth; 
-                usdTotalEl.classList.add('success-pulse');
-            }
-        }
-    } catch (err) { addLog("Rate API Error. Cannot fetch live currency."); }
-}
-
-scannedInput.addEventListener('input', (e) => {
-    const val = parseFloat(e.target.value);
-    if (!isNaN(val)) convertCurrency(val);
-    else {
-        const el = document.getElementById('usd-total');
-        if (el) el.innerText = "--";
-    }
-});
-
-function addLog(msg) { document.getElementById('latest-message').innerHTML = `<span class="log-entry latest">${msg}</span>`; }
