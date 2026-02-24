@@ -41,12 +41,15 @@ function loadSettings() {
 }
 
 function resetTotals() {
-    scannedInput.value = "";
+    if (scannedInput) scannedInput.value = "";
     const usdTotalEl = document.getElementById('usd-total');
-    usdTotalEl.innerText = "--";
-    usdTotalEl.classList.remove('success-pulse'); // Clear any stuck animations
+    if (usdTotalEl) {
+        usdTotalEl.innerText = "--";
+        usdTotalEl.classList.remove('success-pulse');
+    }
 }
 
+// Fixed workspace update that targets the exact new HTML tags
 function updateWorkspace() {
     if (currentScanMode === 'receipt') {
         currencyPanel.classList.remove('hidden');
@@ -57,9 +60,14 @@ function updateWorkspace() {
         totalsPanel.classList.add('hidden');
         logContainer.classList.add('expanded');
     }
-    document.getElementById('scanned-currency-tag').innerText = awaySelect.value;
-    document.getElementById('home-currency-tag').innerText = homeSelect.value;
-    resetTotals(); // Wipe ghost data when switching modes
+    
+    const scannedTag = document.getElementById('scanned-currency-tag');
+    if (scannedTag) scannedTag.innerText = awaySelect.value;
+    
+    const homeTag = document.getElementById('home-currency-tag');
+    if (homeTag) homeTag.innerText = homeSelect.value;
+    
+    resetTotals();
 }
 
 modeChips.forEach(chip => {
@@ -142,7 +150,7 @@ function wakeCamera() {
     isCameraActive = true;
     captureBtn.classList.remove('error-pulse');
     addLog("Ready. Point and SCAN.");
-    resetTotals(); // Wiping ghost data on a new scan
+    resetTotals(); 
 }
 
 let isTorchOn = false;
@@ -276,12 +284,14 @@ async function convertCurrency(amount) {
             const result = (amount * rate).toFixed(2);
             
             const usdTotalEl = document.getElementById('usd-total');
-            usdTotalEl.innerText = result;
-            
-            // Trigger the 3-pulse success animation
-            usdTotalEl.classList.remove('success-pulse');
-            void usdTotalEl.offsetWidth; // Force CSS reflow to restart animation
-            usdTotalEl.classList.add('success-pulse');
+            if (usdTotalEl) {
+                // Notice there is no appended currency string here anymore!
+                usdTotalEl.innerText = result;
+                
+                usdTotalEl.classList.remove('success-pulse');
+                void usdTotalEl.offsetWidth; 
+                usdTotalEl.classList.add('success-pulse');
+            }
         }
     } catch (err) { addLog("Rate API Error. Cannot fetch live currency."); }
 }
@@ -289,7 +299,10 @@ async function convertCurrency(amount) {
 scannedInput.addEventListener('input', (e) => {
     const val = parseFloat(e.target.value);
     if (!isNaN(val)) convertCurrency(val);
-    else document.getElementById('usd-total').innerText = "--";
+    else {
+        const el = document.getElementById('usd-total');
+        if (el) el.innerText = "--";
+    }
 });
 
 function addLog(msg) { document.getElementById('latest-message').innerHTML = `<span class="log-entry latest">${msg}</span>`; }
