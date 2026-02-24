@@ -64,7 +64,6 @@
         }
         #scanner-button { background: var(--accent); color: var(--bg); }
         
-        /* CSS Animations for the Scan Loop */
         .processing-btn { opacity: 0.5; pointer-events: none; filter: grayscale(1); }
         .error-pulse { animation: pulseError 1.5s infinite; color: white !important; }
         @keyframes pulseError {
@@ -73,13 +72,23 @@
             100% { background: var(--error); }
         }
 
+        /* 3-Pulse Success Animation */
+        @keyframes pulseSuccess {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.1); filter: brightness(1.5); color: white; }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+        .success-pulse { animation: pulseSuccess 0.4s 3; display: inline-block; }
+
         .stat-card { 
             background: var(--card-bg); padding: 12px; border-radius: 12px; border: 1px solid var(--border); flex: 1;
         }
-        .val { font-size: 1.2rem; font-weight: 900; margin-top: 5px; white-space: nowrap; }
+        
+        .currency-tag { color: var(--text-dim); font-size: 1rem; font-weight: bold; margin-right: 8px; }
+        .val { font-size: 1.2rem; font-weight: 900; white-space: nowrap; }
         
         .input-val {
-            background: transparent; border: none; color: white; width: 85px; outline: none; 
+            background: transparent; border: none; color: white; width: 100%; outline: none; 
             font-family: inherit; padding: 0; border-bottom: 1px dashed var(--text-dim); text-align: left;
         }
         .input-val:focus { border-bottom-color: var(--accent); }
@@ -154,13 +163,16 @@
         <div class="row" id="totals-panel">
             <div class="stat-card">
                 <div class="label">HOME TOTAL</div>
-                <div id="usd-total" class="val" style="color:var(--gold)">--</div>
+                <div style="display: flex; align-items: baseline; margin-top: 5px;">
+                    <span id="home-currency-tag" class="currency-tag">USD</span>
+                    <span id="usd-total" class="val" style="color:var(--gold)">--</span>
+                </div>
             </div>
             <div class="stat-card">
                 <div class="label">SCANNED AMT</div>
-                <div style="display: flex; align-items: baseline; gap: 4px; margin-top: 5px;">
+                <div style="display: flex; align-items: baseline; margin-top: 5px;">
+                    <span id="scanned-currency-tag" class="currency-tag">THB</span>
                     <input type="number" id="scanned-input" class="val input-val" placeholder="0.00" step="0.01">
-                    <span id="scanned-currency" class="val" style="color: white; font-size: 1.1rem;">THB</span>
                 </div>
             </div>
         </div>

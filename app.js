@@ -15,7 +15,6 @@ let isCameraActive = false;
 let isProcessing = false;
 let currentScanMode = 'receipt';
 
-// Triple Tap Variables
 let clickCount = 0;
 let clickTimer;
 
@@ -25,7 +24,6 @@ window.onload = () => {
     updateWorkspace();
 };
 
-// Local Storage Memory
 function saveSettings() {
     localStorage.setItem('tsp_home', homeSelect.value);
     localStorage.setItem('tsp_away', awaySelect.value);
@@ -42,7 +40,13 @@ function loadSettings() {
     });
 }
 
-// Workspace UI Toggle
+function resetTotals() {
+    scannedInput.value = "";
+    const usdTotalEl = document.getElementById('usd-total');
+    usdTotalEl.innerText = "--";
+    usdTotalEl.classList.remove('success-pulse'); // Clear any stuck animations
+}
+
 function updateWorkspace() {
     if (currentScanMode === 'receipt') {
         currencyPanel.classList.remove('hidden');
@@ -53,37 +57,32 @@ function updateWorkspace() {
         totalsPanel.classList.add('hidden');
         logContainer.classList.add('expanded');
     }
-    // The SCANNED AMT chip should show the AWAY currency
-    document.getElementById('scanned-currency').innerText = awaySelect.value;
+    document.getElementById('scanned-currency-tag').innerText = awaySelect.value;
+    document.getElementById('home-currency-tag').innerText = homeSelect.value;
+    resetTotals(); // Wipe ghost data when switching modes
 }
 
-// Mode Selection & Triple Tap Logic (Upgraded for Zero Lag)
 modeChips.forEach(chip => {
     chip.addEventListener('click', () => {
         clickCount++;
         
-        // 1. Instantly update the UI so the app feels lightning fast
         modeChips.forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
         currentScanMode = chip.getAttribute('data-mode');
         saveSettings();
         updateWorkspace();
         
-        // 2. Clear any existing timers so we can track rapid clicks
         clearTimeout(clickTimer);
         
-        // 3. Start a generous 500ms countdown for the user to finish tapping
         clickTimer = setTimeout(() => {
-            clickCount = 0; // Reset the counter
-            // Only wake the camera and log the action after they stop tapping
+            clickCount = 0; 
             addLog(`Mode switched to: ${currentScanMode.toUpperCase()}`);
             if (!isCameraActive && !isProcessing) wakeCamera();
         }, 500);
 
-        // 4. Intercept! If they hit 3 rapid taps, show the Help menu
         if (clickCount === 3) {
-            clickCount = 0; // Reset
-            clearTimeout(clickTimer); // Cancel the standard camera wake
+            clickCount = 0; 
+            clearTimeout(clickTimer); 
             triggerHelp(currentScanMode);
         }
     });
@@ -97,7 +96,6 @@ function triggerHelp(mode) {
     document.getElementById('latest-message').innerHTML = `<span style="color:#38bdf8; font-weight:bold;">HELP:</span> ${helpMsg}`;
 }
 
-// GPS Logic (using a free, keyless IP-based geo API)
 async function fetchGPSCurrency(targetSelectId, locationName) {
     addLog(`📍 Locating ${locationName}...`);
     try {
@@ -127,7 +125,6 @@ document.getElementById('away-gps').addEventListener('click', () => fetchGPSCurr
 homeSelect.addEventListener('change', () => { saveSettings(); updateWorkspace(); });
 awaySelect.addEventListener('change', () => { saveSettings(); updateWorkspace(); });
 
-// Camera Loop
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -145,6 +142,7 @@ function wakeCamera() {
     isCameraActive = true;
     captureBtn.classList.remove('error-pulse');
     addLog("Ready. Point and SCAN.");
+    resetTotals(); // Wiping ghost data on a new scan
 }
 
 let isTorchOn = false;
@@ -160,23 +158,19 @@ torchBtn.addEventListener('click', async () => {
     }
 });
 
-// The Unified SCAN Button Flow
 captureBtn.addEventListener('click', async () => {
-    if (isProcessing) return; // Prevent double-taps while AI thinks
+    if (isProcessing) return; 
     
     if (!isCameraActive) {
-        // State 2/3: User is waking camera up after reading results or a failure
         wakeCamera();
         return;
     }
 
-    // State 1: Camera is live. Time to snap.
     if (navigator.vibrate) navigator.vibrate(50);
     isProcessing = true;
     captureBtn.classList.add('processing-btn');
     addLog("Processing visual data...");
 
-    // Quick flash to simulate shutter
     video.style.opacity = 0.5;
     setTimeout(() => { video.style.opacity = 1; }, 100);
 
@@ -187,11 +181,9 @@ captureBtn.addEventListener('click', async () => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Freeze the video feed
         video.pause();
         isCameraActive = false;
         
-        // Turn off torch if left on
         if (streamTrack && isTorchOn) {
             try {
                 isTorchOn = false;
@@ -244,16 +236,12 @@ async function analyzeImage(base64Image) {
         const result = JSON.parse(rawText);
 
         if (currentScanMode === 'receipt' && result.total > 0) {
-            // Place the scanned total in the AWAY column's input field
             scannedInput.value = result.total;
-            // Trigger the conversion to populate the HOME column's total field
             convertCurrency(result.total);
         } else {
-            scannedInput.value = "";
-            document.getElementById('usd-total').innerText = "--";
+            resetTotals();
         }
         
-        // Success
         document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:normal;">${result.advice}</span>`;
         resetButtonState(false);
 
@@ -286,8 +274,14 @@ async function convertCurrency(amount) {
         if (data.result === "success") {
             const rate = data.rates[home];
             const result = (amount * rate).toFixed(2);
-            // Place the converted total in the HOME column's display field
-            document.getElementById('usd-total').innerText = `${result} ${home}`;
+            
+            const usdTotalEl = document.getElementById('usd-total');
+            usdTotalEl.innerText = result;
+            
+            // Trigger the 3-pulse success animation
+            usdTotalEl.classList.remove('success-pulse');
+            void usdTotalEl.offsetWidth; // Force CSS reflow to restart animation
+            usdTotalEl.classList.add('success-pulse');
         }
     } catch (err) { addLog("Rate API Error. Cannot fetch live currency."); }
 }
