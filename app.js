@@ -211,7 +211,6 @@ async function analyzeImage(base64Image) {
         return;
     }
 
-    // Upgraded prompts requesting bulleted lists for menus and dishes
     let promptText = "";
     if (currentScanMode === "receipt") {
         promptText = `Analyze this receipt. Return ONLY a JSON object with two keys:
@@ -250,7 +249,6 @@ async function analyzeImage(base64Image) {
             resetTotals();
         }
         
-        // Convert the AI's plain-text line breaks (\n) into visual HTML line breaks (<br>)
         const formattedAdvice = result.advice.replace(/\n/g, '<br>');
         
         document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:normal;">${formattedAdvice}</span>`;
@@ -277,3 +275,34 @@ async function convertCurrency(amount) {
     const away = awaySelect.value;
     const home = homeSelect.value;
     if (!amount || isNaN(amount)) return;
+
+    try {
+        const url = `https://open.er-api.com/v6/latest/${away}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data.result === "success") {
+            const rate = data.rates[home];
+            const result = (amount * rate).toFixed(2);
+            
+            const usdTotalEl = document.getElementById('usd-total');
+            if (usdTotalEl) {
+                usdTotalEl.innerText = result;
+                
+                usdTotalEl.classList.remove('success-pulse');
+                void usdTotalEl.offsetWidth; 
+                usdTotalEl.classList.add('success-pulse');
+            }
+        }
+    } catch (err) { addLog("Rate API Error. Cannot fetch live currency."); }
+}
+
+scannedInput.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val)) convertCurrency(val);
+    else {
+        const el = document.getElementById('usd-total');
+        if (el) el.innerText = "--";
+    }
+});
+
+function addLog(msg) { document.getElementById('latest-message').innerHTML = `<span class="log-entry latest">${msg}</span>`; }
