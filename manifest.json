@@ -4,5 +4,5 @@
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#020617",
-  "start_url": "index.html"
+  "start_url": "."
 }
