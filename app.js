@@ -308,3 +308,23 @@ scannedInput.addEventListener('input', (e) => {
 });
 
 function addLog(msg) { document.getElementById('latest-message').innerHTML = `<span class="log-entry latest">${msg}</span>`; }
+
+// --- Reading Mode Logic ---
+const readingModal = document.getElementById('reading-modal');
+const readingText = document.getElementById('reading-text');
+const closeModalBtn = document.getElementById('close-modal');
+
+// Listen for clicks on the log container
+logContainer.addEventListener('click', () => {
+    const currentText = document.getElementById('latest-message').innerHTML;
+    // Don't expand if it's just the initializing message or an error
+    if (!currentText.includes("Initializing") && !currentText.includes("SYSTEM:")) {
+        readingText.innerHTML = currentText;
+        readingModal.classList.remove('hidden');
+    }
+});
+
+// Close the modal
+closeModalBtn.addEventListener('click', () => {
+    readingModal.classList.add('hidden');
+});
