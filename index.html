@@ -24,18 +24,22 @@
 
         *, *::before, *::after { box-sizing: border-box; }
 
+        /* Force the browser to respect full height */
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; }
+        
         body { 
             font-family: -apple-system, system-ui, sans-serif;
-            background: #000; color: white; margin: 0; padding: 0;
-            display: flex; justify-content: center; height: 100vh; overflow: hidden;
+            background: #000; color: white; 
+            display: flex; justify-content: center; overflow: hidden;
         }
 
         .app-frame { 
-            width: 100%; max-width: 450px; display: flex; flex-direction: column; background: var(--bg);
-            border: 1px solid var(--gold); 
+            width: 100%; max-width: 450px; height: 100%;
+            display: flex; flex-direction: column; background: var(--bg);
+            /* Safe gold borders that won't collapse the layout */
+            border-left: 1px solid var(--gold); border-right: 1px solid var(--gold);
             box-shadow: 0 0 20px rgba(251, 191, 36, 0.15); 
-            height: 100%; position: relative;
-            overflow: hidden; /* Locks everything firmly inside the gold piping */
+            position: relative;
         }
 
         #camera-container {
@@ -60,38 +64,4 @@
         }
         .mode-chip.active { background: var(--accent); border-color: var(--accent); color: #000; }
 
-        select { 
-            background: var(--card-bg); color: var(--accent); border: 1px solid var(--border);
-            padding: 10px; border-radius: 8px; font-size: 13px; outline: none; font-weight: bold; flex: 1;
-        }
-        
-        .gps-btn {
-            background: #1e293b; color: white; border: 1px solid var(--border); 
-            padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;
-        }
-
-        .btn { 
-            padding: 16px; border-radius: 12px; font-size: 14px; border: none; font-weight: 900; 
-            text-transform: uppercase; cursor: pointer; flex: 1; transition: all 0.2s;
-            display: flex; justify-content: center; align-items: center;
-        }
-        #scanner-button { background: var(--accent); color: #000; }
-        
-        .processing-btn { opacity: 0.5; pointer-events: none; filter: grayscale(1); }
-        .error-pulse { animation: pulseError 1.5s infinite; color: white !important; }
-        @keyframes pulseError { 0% { background: var(--error); } 50% { background: #7f1d1d; } 100% { background: var(--error); } }
-
-        @keyframes pulseSuccess { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.1); filter: brightness(1.5); color: white; } 100% { transform: scale(1); filter: brightness(1); } }
-        .success-pulse { animation: pulseSuccess 0.4s 3; display: inline-block; }
-
-        .stat-card { background: var(--card-bg); padding: 12px; border-radius: 12px; border: 1px solid var(--border); flex: 1; }
-        .currency-tag { color: var(--text-dim); font-size: 1rem; font-weight: bold; margin-right: 8px; }
-        .val { font-size: 1.2rem; font-weight: 900; white-space: nowrap; }
-        
-        .input-val {
-            background: transparent; border: none; color: white; width: 100%; outline: none; 
-            font-family: inherit; padding: 0; border-bottom: 1px dashed var(--text-dim); text-align: left;
-        }
-        .input-val:focus { border-bottom-color: var(--accent); }
-
-        #log-container {
+        select
