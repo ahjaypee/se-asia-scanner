@@ -10,6 +10,11 @@ const currencyPanel = document.getElementById('currency-panel');
 const totalsPanel = document.getElementById('totals-panel');
 const logContainer = document.getElementById('log-container');
 
+// Reading Modal Elements
+const readingModal = document.getElementById('reading-modal');
+const readingText = document.getElementById('reading-text');
+const closeModalBtn = document.getElementById('close-modal');
+
 let streamTrack = null;
 let isCameraActive = false;
 let isProcessing = false;
@@ -211,7 +216,6 @@ async function analyzeImage(base64Image) {
         return;
     }
 
-    // Upgraded prompts focusing heavily on practical advice, cultural tipping norms, and service charges.
     let promptText = "";
     if (currentScanMode === "receipt") {
         promptText = `Analyze this receipt. Return ONLY a JSON object with two keys:
@@ -310,21 +314,21 @@ scannedInput.addEventListener('input', (e) => {
 function addLog(msg) { document.getElementById('latest-message').innerHTML = `<span class="log-entry latest">${msg}</span>`; }
 
 // --- Reading Mode Logic ---
-const readingModal = document.getElementById('reading-modal');
-const readingText = document.getElementById('reading-text');
-const closeModalBtn = document.getElementById('close-modal');
-
-// Listen for clicks on the log container
 logContainer.addEventListener('click', () => {
-    const currentText = document.getElementById('latest-message').innerHTML;
-    // Don't expand if it's just the initializing message or an error
-    if (!currentText.includes("Initializing") && !currentText.includes("SYSTEM:")) {
-        readingText.innerHTML = currentText;
+    const messageNode = document.getElementById('latest-message');
+    const currentText = messageNode.innerHTML;
+    const rawText = messageNode.innerText;
+    
+    // Don't expand if it's just a system message
+    if (!rawText.includes("Initializing") && !rawText.includes("SYSTEM:") && !rawText.includes("Ready.") && !rawText.includes("Mode switched") && !rawText.includes("Processing")) {
+        // Strip the yellow span tag wrapper to keep text styling clean inside the card
+        readingText.innerHTML = currentText.replace(/<span[^>]*>|<\/span>/g, '');
         readingModal.classList.remove('hidden');
     }
 });
 
-// Close the modal
-closeModalBtn.addEventListener('click', () => {
-    readingModal.classList.add('hidden');
+// Close modal when tapping the close button OR tapping anywhere on the dark background
+closeModalBtn.addEventListener('click', () => readingModal.classList.add('hidden'));
+readingModal.addEventListener('click', (e) => {
+    if(e.target === readingModal) readingModal.classList.add('hidden');
 });
