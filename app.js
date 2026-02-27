@@ -13,7 +13,7 @@ const logContainer = document.getElementById('log-container');
 // Reading Modal Elements
 const readingModal = document.getElementById('reading-modal');
 const readingText = document.getElementById('reading-text');
-const closeModalBtn = document.getElementById('close-modal');
+const closeModalBtn = document.getElementById('close-modal-float'); // Updated ID
 
 let streamTrack = null;
 let isCameraActive = false;
@@ -327,7 +327,7 @@ logContainer.addEventListener('click', () => {
     }
 });
 
-// Close modal when tapping the close button OR tapping anywhere on the dark background
+// Close modal when tapping the 'X' button OR tapping anywhere on the dark background
 closeModalBtn.addEventListener('click', () => readingModal.classList.add('hidden'));
 readingModal.addEventListener('click', (e) => {
     if(e.target === readingModal) readingModal.classList.add('hidden');
