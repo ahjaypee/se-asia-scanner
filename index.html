@@ -22,24 +22,20 @@
             --error: #ef4444;
         }
 
-        *, *::before, *::after { box-sizing: border-box; }
-
-        /* Force the browser to respect full height */
-        html, body { height: 100%; width: 100%; margin: 0; padding: 0; }
+		/* Force the browser to respect full height safely */
+        html, body { min-height: 100vh; width: 100%; margin: 0; padding: 0; }
         
         body { 
             font-family: -apple-system, system-ui, sans-serif;
             background: #000; color: white; 
-            display: flex; justify-content: center; overflow: hidden;
+            display: flex; justify-content: center; overflow-x: hidden;
         }
 
         .app-frame { 
-            width: 100%; max-width: 450px; height: 100%;
+            width: 100%; max-width: 450px; min-height: 100vh;
             display: flex; flex-direction: column; background: var(--bg);
-            /* Safe gold borders that won't collapse the layout */
             border-left: 1px solid var(--gold); border-right: 1px solid var(--gold);
             box-shadow: 0 0 20px rgba(251, 191, 36, 0.15); 
-            position: relative;
         }
 
         #camera-container {
