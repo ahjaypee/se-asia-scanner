@@ -1,3 +1,9 @@
+// GLOBAL ERROR CATCHER: If anything breaks, pop up an alert so we can see it!
+window.onerror = function(message, source, lineno, colno, error) {
+    alert("SYSTEM ERROR:\n" + message + "\nLine: " + lineno);
+    return false;
+};
+
 const video = document.getElementById('camera-stream');
 const captureBtn = document.getElementById('scanner-button');
 const torchBtn = document.getElementById('torch-button');
@@ -9,9 +15,6 @@ const modeChips = document.querySelectorAll('.mode-chip');
 const currencyPanel = document.getElementById('currency-panel');
 const totalsPanel = document.getElementById('totals-panel');
 const logContainer = document.getElementById('log-container');
-
-// Reading Modal Elements
-const readingModal = document.getElementById('reading-modal');
 const readingText = document.getElementById('reading-text');
 
 let streamTrack = null;
@@ -223,4 +226,106 @@ async function analyzeImage(base64Image) {
     } else if (currentScanMode === "menu") {
         promptText = `Analyze this menu. Return ONLY a JSON object with two keys:
         1. 'total': return 0.
-        2. 'advice': Act as a local culinary guide. Use a bulleted list. Highlight 1 or 2 regional specialties to consider. Then, briefly state the
+        2. 'advice': Act as a local culinary guide. Use a bulleted list. Highlight 1 or 2 regional specialties to consider. Then, briefly state the standard tipping etiquette for this specific country so the user knows what to expect when the bill comes.`;
+    } else if (currentScanMode === "food") {
+        promptText = `Analyze this photo of food. Return ONLY a JSON object with two keys:
+        1. 'total': return 0.
+        2. 'advice': Act as a culinary expert. Identify the dish in a short sentence. Then, use a bulleted list to outline its key ingredients and flavor profile. Keep it practical and appetizing, skipping unnecessary trivia.`;
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`;
+    const payload = {
+        contents: [{
+            parts: [{ text: promptText }, { inline_data: { mime_type: "image/jpeg", data: base64Image } }]
+        }],
+        generationConfig: { response_mime_type: "application/json" }
+    };
+
+    try {
+        const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+
+        const rawText = data.candidates[0].content.parts[0].text;
+        const result = JSON.parse(rawText);
+
+        if (currentScanMode === 'receipt' && result.total > 0) {
+            scannedInput.value = result.total;
+            convertCurrency(result.total);
+        } else {
+            resetTotals();
+        }
+        
+        let formattedAdvice = result.advice.replace(/\n/g, '<br>');
+        formattedAdvice = formattedAdvice.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+        
+        document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:normal;">${formattedAdvice}</span>`;
+        resetButtonState(false);
+
+    } catch (err) {
+        console.error("Extraction Error:", err);
+        handleError("Scan failed. Please tap SCAN to wake camera and try a different angle.");
+    }
+}
+
+function handleError(msg) {
+    document.getElementById('latest-message').innerHTML = `<span style="color:#f87171; font-weight:bold;">SYSTEM:</span> ${msg}`;
+    resetButtonState(true);
+}
+
+function resetButtonState(isError) {
+    isProcessing = false;
+    captureBtn.classList.remove('processing-btn');
+    if (isError) captureBtn.classList.add('error-pulse');
+}
+
+async function convertCurrency(amount) {
+    const away = awaySelect.value;
+    const home = homeSelect.value;
+    if (!amount || isNaN(amount)) return;
+
+    try {
+        const url = `https://open.er-api.com/v6/latest/${away}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data.result === "success") {
+            const rate = data.rates[home];
+            const result = (amount * rate).toFixed(2);
+            
+            const usdTotalEl = document.getElementById('usd-total');
+            if (usdTotalEl) {
+                usdTotalEl.innerText = result;
+                
+                usdTotalEl.classList.remove('success-pulse');
+                void usdTotalEl.offsetWidth; 
+                usdTotalEl.classList.add('success-pulse');
+            }
+        }
+    } catch (err) { addLog("Rate API Error. Cannot fetch live currency."); }
+}
+
+scannedInput.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val)) convertCurrency(val);
+    else {
+        const el = document.getElementById('usd-total');
+        if (el) el.innerText = "--";
+    }
+});
+
+function addLog(msg) { document.getElementById('latest-message').innerHTML = `<span class="log-entry latest">${msg}</span>`; }
+
+// --- Reading Mode Logic ---
+logContainer.addEventListener('click', () => {
+    const messageNode = document.getElementById('latest-message');
+    if (!messageNode) return;
+    const currentText = messageNode.innerHTML;
+    const rawText = messageNode.innerText;
+    
+    // Don't expand if it's just a system message
+    if (!rawText.includes("Initializing") && !rawText.includes("SYSTEM:") && !rawText.includes("Ready.") && !rawText.includes("Mode switched") && !rawText.includes("Processing")) {
+        // Strip the yellow span tag wrapper to keep text styling clean inside the card
+        readingText.innerHTML = currentText.replace(/<span[^>]*>|<\/span>/g, '');
+        document.getElementById('reading-modal').classList.remove('hidden');
+    }
+});

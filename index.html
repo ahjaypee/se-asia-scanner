@@ -22,26 +22,30 @@
             --error: #ef4444;
         }
 
-		/* Force the browser to respect full height safely */
-        html, body { min-height: 100vh; width: 100%; margin: 0; padding: 0; }
+        *, *::before, *::after { box-sizing: border-box; }
+
+        /* Bulletproof standard layout */
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; background-color: #000; }
         
         body { 
             font-family: -apple-system, system-ui, sans-serif;
-            background: #000; color: white; 
-            display: flex; justify-content: center; overflow-x: hidden;
+            color: white; display: flex; justify-content: center;
         }
 
         .app-frame { 
-            width: 100%; max-width: 450px; min-height: 100vh;
-            display: flex; flex-direction: column; background: var(--bg);
+            width: 100%; max-width: 450px; min-height: 100%;
+            display: flex; flex-direction: column; background-color: var(--bg);
             border-left: 1px solid var(--gold); border-right: 1px solid var(--gold);
-            box-shadow: 0 0 20px rgba(251, 191, 36, 0.15); 
+            box-shadow: 0 0 25px rgba(251, 191, 36, 0.2); 
+            position: relative;
         }
 
         #camera-container {
-            width: 100%; height: 38vh; background: #000; position: relative; border-bottom: 2px solid var(--accent);
+            width: 100%; height: 35vh; background: #000; position: relative; 
+            border-bottom: 2px solid var(--accent);
             display: flex; align-items: center; justify-content: center;
         }
+        
         #camera-stream { width: 100%; height: 100%; object-fit: cover; }
 
         .controls-area {
@@ -62,4 +66,174 @@
 
         select { 
             background: var(--card-bg); color: var(--accent); border: 1px solid var(--border);
-            padding: 10px; border-radius: 8px; font-size:
+            padding: 10px; border-radius: 8px; font-size: 13px; outline: none; font-weight: bold; flex: 1;
+        }
+        
+        .gps-btn {
+            background: #1e293b; color: white; border: 1px solid var(--border); 
+            padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;
+        }
+
+        .btn { 
+            padding: 16px; border-radius: 12px; font-size: 14px; border: none; font-weight: 900; 
+            text-transform: uppercase; cursor: pointer; flex: 1; transition: all 0.2s;
+            display: flex; justify-content: center; align-items: center;
+        }
+        #scanner-button { background: var(--accent); color: #000; }
+        
+        .processing-btn { opacity: 0.5; pointer-events: none; filter: grayscale(1); }
+        .error-pulse { animation: pulseError 1.5s infinite; color: white !important; }
+        @keyframes pulseError { 0% { background: var(--error); } 50% { background: #7f1d1d; } 100% { background: var(--error); } }
+
+        @keyframes pulseSuccess { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.1); filter: brightness(1.5); color: white; } 100% { transform: scale(1); filter: brightness(1); } }
+        .success-pulse { animation: pulseSuccess 0.4s 3; display: inline-block; }
+
+        .stat-card { background: var(--card-bg); padding: 12px; border-radius: 12px; border: 1px solid var(--border); flex: 1; }
+        .currency-tag { color: var(--text-dim); font-size: 1rem; font-weight: bold; margin-right: 8px; }
+        .val { font-size: 1.2rem; font-weight: 900; white-space: nowrap; }
+        
+        .input-val {
+            background: transparent; border: none; color: white; width: 100%; outline: none; 
+            font-family: inherit; padding: 0; border-bottom: 1px dashed var(--text-dim); text-align: left;
+        }
+        .input-val:focus { border-bottom-color: var(--accent); }
+
+        #log-container {
+            background: #000; padding: 12px; border-radius: 12px; border: 1px dashed var(--border);
+            flex: 1; min-height: 80px; max-height: 120px; display: block;
+            overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; transition: all 0.3s;
+            position: relative; cursor: pointer;
+        }
+        #log-container.expanded { min-height: 180px; max-height: 35vh; }
+        
+        .expand-hint {
+            position: absolute; top: 5px; right: 10px; font-size: 0.65rem; 
+            color: var(--text-dim); text-transform: uppercase; font-weight: bold;
+            background: var(--card-bg); padding: 2px 6px; border-radius: 4px;
+        }
+
+        #latest-message {
+            background: rgba(251, 191, 36, 0.1); border-left: 4px solid #fbbf24; padding: 12px;
+            border-radius: 4px; color: #f3f4f6; width: 100%; line-height: 1.5; font-size: 0.95rem;
+            word-wrap: break-word; overflow-wrap: break-word; margin-top: 15px;
+        }
+        .log-entry.latest { color: var(--text-dim); font-weight: 500; font-style: normal; border: none; background: transparent; padding: 0; margin-top: 0;}
+        
+        /* Reading Modal */
+        #reading-modal {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(2, 6, 23, 0.98); z-index: 2000;
+            display: flex; flex-direction: column; padding: 65px 20px 20px 20px; 
+            backdrop-filter: blur(5px);
+        }
+        .reading-content {
+            flex: 1; min-height: 0; overflow-y: auto; background: var(--card-bg); 
+            border: 1px solid var(--gold); border-radius: 12px; padding: 25px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        #reading-text { font-size: 1.15rem; line-height: 1.6; color: #f3f4f6; }
+        #reading-text b { color: var(--gold); }
+        
+        #close-modal-float {
+            position: absolute; top: 15px; right: 15px; background: var(--card-bg); 
+            color: white; border: 1px solid var(--gold); border-radius: 50%; 
+            width: 40px; height: 40px; font-size: 1.2rem; font-weight: bold;
+            display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; z-index: 2001; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="app-frame">
+    <div id="camera-container">
+        <video id="camera-stream" autoplay playsinline muted></video>
+    </div>
+
+    <div class="controls-area">
+        <div class="row" id="mode-selector">
+            <button class="mode-chip" data-mode="menu">📖 MENU</button>
+            <button class="mode-chip" data-mode="food">🍽️ DISH</button>
+            <button class="mode-chip active" data-mode="receipt">🧾 RECEIPT</button>
+        </div>
+
+        <div class="row" id="currency-panel">
+            <div class="col">
+                <div class="label">HOME</div>
+                <div class="row" style="gap: 5px;">
+                    <button id="home-gps" class="gps-btn">📍 GPS</button>
+                    <select id="home-currency">
+                        <option value="USD">🇺🇸 USD</option>
+                        <option value="CAD">🇨🇦 CAD</option>
+                        <option value="EUR">🇪🇺 EUR</option>
+                        <option value="GBP">🇬🇧 GBP</option>
+                        <option value="AUD">🇦🇺 AUD</option>
+                        <option value="NZD">🇳🇿 NZD</option>
+                        <option value="THB">🇹🇭 THB</option>
+                        <option value="VND">🇻🇳 VND</option>
+                        <option value="SGD">🇸🇬 SGD</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col">
+                <div class="label">AWAY</div>
+                <div class="row" style="gap: 5px;">
+                    <button id="away-gps" class="gps-btn">📍 GPS</button>
+                    <select id="away-currency">
+                        <option value="USD">🇺🇸 USD</option>
+                        <option value="CAD">🇨🇦 CAD</option>
+                        <option value="EUR">🇪🇺 EUR</option>
+                        <option value="GBP">🇬🇧 GBP</option>
+                        <option value="THB" selected>🇹🇭 THB</option>
+                        <option value="VND">🇻🇳 VND</option>
+                        <option value="SGD">🇸🇬 SGD</option>
+                        <option value="AUD">🇦🇺 AUD</option>
+                        <option value="NZD">🇳🇿 NZD</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="totals-panel">
+            <div class="stat-card">
+                <div class="label">HOME TOTAL</div>
+                <div style="display: flex; align-items: baseline; margin-top: 5px;">
+                    <span id="home-currency-tag" class="currency-tag">USD</span>
+                    <span id="usd-total" class="val" style="color:var(--gold)">--</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="label">SCANNED AMT</div>
+                <div style="display: flex; align-items: baseline; margin-top: 5px;">
+                    <span id="scanned-currency-tag" class="currency-tag">THB</span>
+                    <input type="number" id="scanned-input" class="val input-val" placeholder="0.00" step="0.01">
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <button id="torch-button" class="btn" style="flex: 0.25; background: #475569; font-size: 1.5rem; padding: 0;">💡</button>
+            <button id="scanner-button" class="btn">SCAN</button>
+        </div>
+
+        <div id="log-container">
+            <div class="expand-hint">⛶ Tap to Expand</div>
+            <div id="latest-message" class="log-entry latest">Initializing System...</div>
+        </div>
+    </div>
+
+    <div id="reading-modal" class="hidden" onclick="if(event.target === this) this.classList.add('hidden');">
+        <button id="close-modal-float" onclick="document.getElementById('reading-modal').classList.add('hidden');">✖</button>
+        <div class="reading-content">
+            <div id="reading-text"></div>
+        </div>
+    </div>
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
