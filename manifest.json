@@ -1,0 +1,8 @@
+{
+  "name": "Travel Scanner Pro",
+  "short_name": "Scanner",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#020617",
+  "start_url": "index.html"
+}
