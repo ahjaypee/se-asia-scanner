@@ -222,15 +222,15 @@ async function analyzeImage(base64Image) {
     if (currentScanMode === "receipt") {
         promptText = `Analyze this receipt. Return ONLY a JSON object with two keys:
         1. 'total': the final total amount to pay (as a number).
-        2. 'advice': Act as a local travel guide. Use a bulleted list. First, explicitly state if a service charge is already included. Second, based on the local culture, suggest a specific tip amount in the local currency. Finally, note if the overall prices seem reasonable.`;
+        2. 'advice': Act as a local travel guide. Use a bulleted list with **bold** headings for each point. Explicitly state if a service charge is already included. Based on the local culture, suggest a specific tip amount in the local currency. Note if the overall prices seem reasonable.`;
     } else if (currentScanMode === "menu") {
         promptText = `Analyze this menu. Return ONLY a JSON object with two keys:
         1. 'total': return 0.
-        2. 'advice': Act as a local culinary guide. Use a bulleted list. Highlight 1 or 2 regional specialties to consider. Then, briefly state the standard tipping etiquette for this specific country so the user knows what to expect when the bill comes.`;
+        2. 'advice': Act as a local culinary guide. Use a bulleted list with **bold** headings. Highlight 1 or 2 regional specialties to consider. Briefly state the standard tipping etiquette for this specific country so the user knows what to expect when the bill comes.`;
     } else if (currentScanMode === "food") {
         promptText = `Analyze this photo of food. Return ONLY a JSON object with two keys:
         1. 'total': return 0.
-        2. 'advice': Act as a culinary expert. Identify the dish in a short sentence. Then, use a bulleted list to outline its key ingredients and flavor profile. Keep it practical and appetizing, skipping unnecessary trivia.`;
+        2. 'advice': Act as a culinary expert. Identify the dish in a short sentence. Then, use a bulleted list with **bold** headings to outline its key ingredients and flavor profile. Keep it practical and appetizing.`;
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEYS.GEMINI_KEY}`;
@@ -246,17 +246,22 @@ async function analyzeImage(base64Image) {
         const data = await response.json();
         if (data.error) throw new Error(data.error.message);
 
-        const rawText = data.candidates[0].content.parts[0].text;
-        const result = JSON.parse(rawText);
+        // SCRUBBER: Remove markdown code blocks if the AI hallucinates them
+        let rawText = data.candidates[0].content.parts[0].text;
+        let cleanText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const result = JSON.parse(cleanText);
 
-        if (currentScanMode === 'receipt' && result.total > 0) {
-            scannedInput.value = result.total;
-            convertCurrency(result.total);
+        const totalAmount = parseFloat(result.total);
+        if (currentScanMode === 'receipt' && !isNaN(totalAmount) && totalAmount > 0) {
+            scannedInput.value = totalAmount;
+            convertCurrency(totalAmount);
         } else {
             resetTotals();
         }
         
-        let formattedAdvice = result.advice.replace(/\n/g, '<br>');
+        // Ensure formatting works even if the AI gets creative
+        let adviceStr = String(result.advice || "No specific advice could be generated.");
+        let formattedAdvice = adviceStr.replace(/\n/g, '<br>');
         formattedAdvice = formattedAdvice.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
         
         document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:normal;">${formattedAdvice}</span>`;
@@ -322,9 +327,7 @@ logContainer.addEventListener('click', () => {
     const currentText = messageNode.innerHTML;
     const rawText = messageNode.innerText;
     
-    // Don't expand if it's just a system message
     if (!rawText.includes("Initializing") && !rawText.includes("SYSTEM:") && !rawText.includes("Ready.") && !rawText.includes("Mode switched") && !rawText.includes("Processing")) {
-        // Strip the yellow span tag wrapper to keep text styling clean inside the card
         readingText.innerHTML = currentText.replace(/<span[^>]*>|<\/span>/g, '');
         document.getElementById('reading-modal').classList.remove('hidden');
     }
