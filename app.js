@@ -10,7 +10,8 @@ const currencyPanel = document.getElementById('currency-panel');
 const totalsPanel = document.getElementById('totals-panel');
 const logContainer = document.getElementById('log-container');
 
-// We keep these to populate the text, but the close logic is in HTML now
+// Reading Modal Elements
+const readingModal = document.getElementById('reading-modal');
 const readingText = document.getElementById('reading-text');
 
 let streamTrack = null;
@@ -62,3 +63,164 @@ function updateWorkspace() {
         totalsPanel.classList.add('hidden');
         logContainer.classList.add('expanded');
     }
+    
+    const scannedTag = document.getElementById('scanned-currency-tag');
+    if (scannedTag) scannedTag.innerText = awaySelect.value;
+    
+    const homeTag = document.getElementById('home-currency-tag');
+    if (homeTag) homeTag.innerText = homeSelect.value;
+    
+    resetTotals();
+}
+
+modeChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+        clickCount++;
+        
+        modeChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentScanMode = chip.getAttribute('data-mode');
+        saveSettings();
+        updateWorkspace();
+        
+        clearTimeout(clickTimer);
+        
+        clickTimer = setTimeout(() => {
+            clickCount = 0; 
+            addLog(`Mode switched to: ${currentScanMode.toUpperCase()}`);
+            if (!isCameraActive && !isProcessing) wakeCamera();
+        }, 500);
+
+        if (clickCount === 3) {
+            clickCount = 0; 
+            clearTimeout(clickTimer); 
+            triggerHelp(currentScanMode);
+        }
+    });
+});
+
+function triggerHelp(mode) {
+    let helpMsg = "";
+    if (mode === "receipt") helpMsg = "Goal: Audit expenses. Ensure the receipt is flat and well-lit. Tap SCAN to calculate totals in your Home currency.";
+    if (mode === "menu") helpMsg = "Goal: Translate and find specialties. Fill the screen with the menu text. Tap SCAN to get regional recommendations.";
+    if (mode === "food") helpMsg = "Goal: Identify a dish. Ensure the plate fills the frame. Tap SCAN to learn about the ingredients and origins.";
+    document.getElementById('latest-message').innerHTML = `<span style="color:#38bdf8; font-weight:bold;">HELP:</span> ${helpMsg}`;
+}
+
+async function fetchGPSCurrency(targetSelectId, locationName) {
+    addLog(`📍 Locating ${locationName}...`);
+    try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        if (data.currency) {
+            const select = document.getElementById(targetSelectId);
+            const exists = Array.from(select.options).some(opt => opt.value === data.currency);
+            
+            if (exists) {
+                select.value = data.currency;
+                addLog(`📍 Found you in ${data.country_name}. Set to ${data.currency}.`);
+                saveSettings();
+                updateWorkspace();
+            } else {
+                addLog(`📍 Found you in ${data.country_name}, but ${data.currency} is not in your list.`);
+            }
+        }
+    } catch (e) {
+        addLog("📍 GPS request failed. Please select manually.");
+    }
+}
+
+document.getElementById('home-gps').addEventListener('click', () => fetchGPSCurrency('home-currency', 'Home'));
+document.getElementById('away-gps').addEventListener('click', () => fetchGPSCurrency('away-currency', 'Away'));
+
+homeSelect.addEventListener('change', () => { saveSettings(); updateWorkspace(); });
+awaySelect.addEventListener('change', () => { saveSettings(); updateWorkspace(); });
+
+async function startCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment", focusMode: "continuous" }, audio: false 
+        });
+        video.srcObject = stream;
+        streamTrack = stream.getVideoTracks()[0];
+        video.onloadedmetadata = () => video.play();
+        wakeCamera();
+    } catch (err) { addLog("Camera Access Denied"); }
+}
+
+function wakeCamera() {
+    video.play();
+    isCameraActive = true;
+    captureBtn.classList.remove('error-pulse');
+    addLog("Ready. Point and SCAN.");
+    resetTotals(); 
+}
+
+let isTorchOn = false;
+torchBtn.addEventListener('click', async () => {
+    if (streamTrack && streamTrack.getCapabilities().torch) {
+        isTorchOn = !isTorchOn;
+        try {
+            await streamTrack.applyConstraints({ advanced: [{ torch: isTorchOn }] });
+            torchBtn.style.background = isTorchOn ? '#fbbf24' : '#475569'; 
+        } catch (e) { console.log("Torch constraint error", e); }
+    } else {
+        addLog("Flashlight not supported on this device.");
+    }
+});
+
+captureBtn.addEventListener('click', async () => {
+    if (isProcessing) return; 
+    
+    if (!isCameraActive) {
+        wakeCamera();
+        return;
+    }
+
+    if (navigator.vibrate) navigator.vibrate(50);
+    isProcessing = true;
+    captureBtn.classList.add('processing-btn');
+    addLog("Processing visual data...");
+
+    video.style.opacity = 0.5;
+    setTimeout(() => { video.style.opacity = 1; }, 100);
+
+    setTimeout(async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        video.pause();
+        isCameraActive = false;
+        
+        if (streamTrack && isTorchOn) {
+            try {
+                isTorchOn = false;
+                torchBtn.style.background = '#475569';
+                await streamTrack.applyConstraints({ advanced: [{ torch: false }] });
+            } catch(e){}
+        }
+        
+        const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
+        analyzeImage(base64Image);
+        
+    }, 150); 
+});
+
+async function analyzeImage(base64Image) {
+    if (!API_KEYS.GEMINI_KEY) {
+        handleError("AI Error: Check config.js for GEMINI_KEY");
+        return;
+    }
+
+    let promptText = "";
+    if (currentScanMode === "receipt") {
+        promptText = `Analyze this receipt. Return ONLY a JSON object with two keys:
+        1. 'total': the final total amount to pay (as a number).
+        2. 'advice': Act as a local travel guide. Use a bulleted list. First, explicitly state if a service charge is already included. Second, based on the local culture, suggest a specific tip amount in the local currency. Finally, note if the overall prices seem reasonable.`;
+    } else if (currentScanMode === "menu") {
+        promptText = `Analyze this menu. Return ONLY a JSON object with two keys:
+        1. 'total': return 0.
+        2. 'advice': Act as a local culinary guide. Use a bulleted list. Highlight 1 or 2 regional specialties to consider. Then, briefly state the
