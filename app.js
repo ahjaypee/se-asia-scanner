@@ -10,8 +10,7 @@ const currencyPanel = document.getElementById('currency-panel');
 const totalsPanel = document.getElementById('totals-panel');
 const logContainer = document.getElementById('log-container');
 
-// Reading Modal Elements
-const readingModal = document.getElementById('reading-modal');
+// We keep these to populate the text, but the close logic is in HTML now
 const readingText = document.getElementById('reading-text');
 
 let streamTrack = null;
@@ -48,4 +47,18 @@ function resetTotals() {
     if (scannedInput) scannedInput.value = "";
     const usdTotalEl = document.getElementById('usd-total');
     if (usdTotalEl) {
-        usd
+        usdTotalEl.innerText = "--";
+        usdTotalEl.classList.remove('success-pulse');
+    }
+}
+
+function updateWorkspace() {
+    if (currentScanMode === 'receipt') {
+        currencyPanel.classList.remove('hidden');
+        totalsPanel.classList.remove('hidden');
+        logContainer.classList.remove('expanded');
+    } else {
+        currencyPanel.classList.add('hidden');
+        totalsPanel.classList.add('hidden');
+        logContainer.classList.add('expanded');
+    }
