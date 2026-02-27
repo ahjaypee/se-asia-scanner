@@ -15,14 +15,25 @@
             --error: #ef4444;
         }
 
+        /* Universal Box Sizing fixes the horizontal wobble */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
         body { 
             font-family: -apple-system, system-ui, sans-serif;
-            background: var(--bg); color: white; margin: 0; padding: 0;
+            background: #000; /* Darkened to make the app frame pop */
+            color: white; margin: 0; padding: 0;
             display: flex; justify-content: center; height: 100vh; overflow: hidden;
         }
 
         .app-frame { 
             width: 100%; max-width: 450px; display: flex; flex-direction: column; background: var(--bg);
+            /* App Presence: Border and Shadow */
+            border-left: 1px solid #334155;
+            border-right: 1px solid #334155;
+            box-shadow: 0 0 25px rgba(0,0,0,0.8);
+            height: 100%;
         }
 
         #camera-container {
@@ -72,7 +83,6 @@
             100% { background: var(--error); }
         }
 
-        /* 3-Pulse Success Animation */
         @keyframes pulseSuccess {
             0% { transform: scale(1); filter: brightness(1); }
             50% { transform: scale(1.1); filter: brightness(1.5); color: white; }
@@ -96,13 +106,14 @@
         #log-container {
             background: #000; padding: 12px; border-radius: 12px; border: 1px dashed var(--border);
             flex: 1; min-height: 80px; max-height: 120px; display: block;
-            overflow-y: auto; -webkit-overflow-scrolling: touch; transition: all 0.3s;
+            overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; transition: all 0.3s;
         }
         #log-container.expanded { min-height: 180px; max-height: 35vh; }
         
         #latest-message {
             background: rgba(251, 191, 36, 0.1); border-left: 4px solid #fbbf24; padding: 12px;
             border-radius: 4px; color: #f3f4f6; width: 100%; line-height: 1.5; font-size: 0.95rem;
+            word-wrap: break-word; overflow-wrap: break-word;
         }
         .log-entry.latest { color: var(--text-dim); font-weight: 500; font-style: normal; border: none; background: transparent; padding: 0;}
         

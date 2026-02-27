@@ -249,7 +249,9 @@ async function analyzeImage(base64Image) {
             resetTotals();
         }
         
-        const formattedAdvice = result.advice.replace(/\n/g, '<br>');
+        // Fix line breaks AND convert Markdown bold to HTML bold for a cleaner look
+        let formattedAdvice = result.advice.replace(/\n/g, '<br>');
+        formattedAdvice = formattedAdvice.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
         
         document.getElementById('latest-message').innerHTML = `<span style="color:#fbbf24; font-weight:normal;">${formattedAdvice}</span>`;
         resetButtonState(false);
