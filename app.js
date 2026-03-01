@@ -1,4 +1,3 @@
-// GLOBAL ERROR CATCHER: If anything breaks, pop up an alert so we can see it!
 window.onerror = function(message, source, lineno, colno, error) {
     alert("SYSTEM ERROR:\n" + message + "\nLine: " + lineno);
     return false;
@@ -17,6 +16,10 @@ const totalsPanel = document.getElementById('totals-panel');
 const logContainer = document.getElementById('log-container');
 const readingText = document.getElementById('reading-text');
 
+// Welcome Screen Elements
+const welcomeScreen = document.getElementById('welcome-screen');
+const startAppBtn = document.getElementById('start-app-btn');
+
 let streamTrack = null;
 let isCameraActive = false;
 let isProcessing = false;
@@ -25,11 +28,17 @@ let currentScanMode = 'receipt';
 let clickCount = 0;
 let clickTimer;
 
+// On load, we just load settings, but we wait to start the camera!
 window.onload = () => {
     loadSettings();
-    startCamera();
     updateWorkspace();
 };
+
+// Start Button Logic
+startAppBtn.addEventListener('click', () => {
+    welcomeScreen.classList.add('hidden');
+    startCamera(); // Fire up the camera ONLY when the user is ready
+});
 
 function saveSettings() {
     localStorage.setItem('tsp_home', homeSelect.value);
@@ -91,7 +100,9 @@ modeChips.forEach(chip => {
         clickTimer = setTimeout(() => {
             clickCount = 0; 
             addLog(`Mode switched to: ${currentScanMode.toUpperCase()}`);
-            if (!isCameraActive && !isProcessing) wakeCamera();
+            if (!isCameraActive && !isProcessing && welcomeScreen.classList.contains('hidden')) {
+                wakeCamera();
+            }
         }, 500);
 
         if (clickCount === 3) {
@@ -246,7 +257,6 @@ async function analyzeImage(base64Image) {
         const data = await response.json();
         if (data.error) throw new Error(data.error.message);
 
-        // SCRUBBER: Remove markdown code blocks if the AI hallucinates them
         let rawText = data.candidates[0].content.parts[0].text;
         let cleanText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
         const result = JSON.parse(cleanText);
@@ -259,7 +269,6 @@ async function analyzeImage(base64Image) {
             resetTotals();
         }
         
-        // Ensure formatting works even if the AI gets creative
         let adviceStr = String(result.advice || "No specific advice could be generated.");
         let formattedAdvice = adviceStr.replace(/\n/g, '<br>');
         formattedAdvice = formattedAdvice.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
@@ -320,7 +329,6 @@ scannedInput.addEventListener('input', (e) => {
 
 function addLog(msg) { document.getElementById('latest-message').innerHTML = `<span class="log-entry latest">${msg}</span>`; }
 
-// --- Reading Mode Logic ---
 logContainer.addEventListener('click', () => {
     const messageNode = document.getElementById('latest-message');
     if (!messageNode) return;
