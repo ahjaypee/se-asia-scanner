@@ -16,10 +16,6 @@ const totalsPanel = document.getElementById('totals-panel');
 const logContainer = document.getElementById('log-container');
 const readingText = document.getElementById('reading-text');
 
-// Welcome Screen Elements
-const welcomeScreen = document.getElementById('welcome-screen');
-const startAppBtn = document.getElementById('start-app-btn');
-
 let streamTrack = null;
 let isCameraActive = false;
 let isProcessing = false;
@@ -28,17 +24,11 @@ let currentScanMode = 'receipt';
 let clickCount = 0;
 let clickTimer;
 
-// On load, we just load settings, but we wait to start the camera!
 window.onload = () => {
     loadSettings();
     updateWorkspace();
+    // Camera is now deliberately delayed until the user clicks START on the Welcome Screen
 };
-
-// Start Button Logic
-startAppBtn.addEventListener('click', () => {
-    welcomeScreen.classList.add('hidden');
-    startCamera(); // Fire up the camera ONLY when the user is ready
-});
 
 function saveSettings() {
     localStorage.setItem('tsp_home', homeSelect.value);
@@ -100,7 +90,8 @@ modeChips.forEach(chip => {
         clickTimer = setTimeout(() => {
             clickCount = 0; 
             addLog(`Mode switched to: ${currentScanMode.toUpperCase()}`);
-            if (!isCameraActive && !isProcessing && welcomeScreen.classList.contains('hidden')) {
+            const welcomeScreen = document.getElementById('welcome-screen');
+            if (!isCameraActive && !isProcessing && welcomeScreen && welcomeScreen.classList.contains('hidden')) {
                 wakeCamera();
             }
         }, 500);

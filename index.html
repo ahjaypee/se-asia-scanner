@@ -39,7 +39,7 @@
             position: relative;
         }
 
-        /* --- NEW: Welcome Screen Styles --- */
+        /* --- Welcome Screen Styles --- */
         #welcome-screen {
             position: absolute; inset: 0; background: var(--bg); z-index: 3000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -51,10 +51,12 @@
         .welcome-subtitle {
             color: var(--text-dim); font-size: 1rem; margin: 0 0 50px 0; line-height: 1.5; font-weight: 500;
         }
+        /* Smaller, sleeker Start Button */
         #start-app-btn {
-            background: var(--accent); color: #000; font-size: 1.2rem; padding: 18px 40px;
-            border-radius: 50px; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4);
-            width: 100%; max-width: 280px; font-weight: 900; letter-spacing: 1px;
+            background: var(--accent); color: #000; font-size: 1rem; padding: 14px 35px;
+            border-radius: 50px; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
+            width: auto; min-width: 160px; font-weight: 900; letter-spacing: 1px;
+            border: none; cursor: pointer; text-transform: uppercase;
         }
         /* ---------------------------------- */
 
@@ -169,7 +171,7 @@
     <div id="welcome-screen">
         <h1 class="welcome-title">AMORA</h1>
         <p class="welcome-subtitle">Automatic Menu, Order<br>& Receipt Analyzer</p>
-        <button id="start-app-btn" class="btn">START</button>
+        <button id="start-app-btn" onclick="document.getElementById('welcome-screen').classList.add('hidden'); startCamera();">START</button>
     </div>
 
     <div id="camera-container">
